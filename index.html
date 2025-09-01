@@ -16,7 +16,13 @@ tailwind.config = {
 .btn{ @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition; }
 .btn-primary{ @apply bg-brand-teal text-white hover:opacity-90; }
 .btn-ghost{ @apply bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700; }
-.input{ @apply w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-teal; }
+.input{
+  @apply w-full rounded-xl border border-zinc-300 dark:border-zinc-700
+         bg-white dark:bg-zinc-900 px-3 py-2
+         text-zinc-900 dark:text-zinc-100
+         placeholder:text-zinc-500 dark:placeholder:text-zinc-400
+         focus:outline-none focus:ring-2 focus:ring-brand-teal;
+}
 .pill{ @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
 .pill-green{ @apply bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300; }
 .pill-red{ @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300; }
@@ -41,18 +47,62 @@ tailwind.config = {
 
   <main class="max-w-6xl mx-auto px-4 py-8">
     <!-- Auth view -->
-    <section id="authView" class="max-w-md mx-auto" hidden>
-      <div class="card p-6">
-        <h2 class="text-xl font-semibold mb-4">Sign in</h2>
-        <div class="space-y-3">
-          <input id="email" type="email" class="input" placeholder="Email" autocomplete="username" />
-          <input id="password" type="password" class="input" placeholder="Password" autocomplete="current-password" />
-          <button id="btnSignIn" class="btn btn-primary w-full">Sign in</button>
-          <div id="authError" class="text-sm text-red-600 dark:text-red-300"></div>
-          <p class="text-xs text-zinc-500 mt-2">Only pre-created accounts can sign in. Self-signup is disabled.</p>
-        </div>
+    <section id="authView" class="max-w-6xl mx-auto" hidden>
+  <div class="grid md:grid-cols-2 gap-8 items-stretch">
+    <!-- Brand panel -->
+    <div class="hidden md:flex card p-8 bg-gradient-to-br from-brand-teal/10 to-emerald-200/20 dark:from-zinc-900 dark:to-zinc-900">
+      <div class="m-auto max-w-sm">
+        <div class="w-12 h-12 rounded-2xl bg-brand-teal mb-4"></div>
+        <h2 class="text-2xl font-semibold mb-2">Welcome to MathitHK</h2>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400">
+          Sign in to access your management dashboard. Only pre-created accounts can log in.
+        </p>
+        <ul class="mt-6 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <li>• View courses and enrolments</li>
+          <li>• Search student records</li>
+          <li>• Manage operations securely</li>
+        </ul>
       </div>
-    </section>
+    </div>
+
+    <!-- Sign-in card -->
+    <div class="card p-8">
+      <div class="mb-6">
+        <h1 class="text-2xl font-semibold">Sign in</h1>
+        <p class="text-sm text-zinc-600 dark:text-zinc-400">Use your work email and password.</p>
+      </div>
+
+      <div class="space-y-4">
+        <label class="block">
+          <span class="block text-sm font-medium mb-1">Email</span>
+          <input id="email" type="email" class="input" placeholder="you@company.com" autocomplete="username" />
+        </label>
+
+        <label class="block">
+          <span class="block text-sm font-medium mb-1">Password</span>
+          <div class="relative">
+            <input id="password" type="password" class="input pr-10" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" id="togglePwd" class="absolute inset-y-0 right-2 my-auto text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200">Show</button>
+          </div>
+        </label>
+
+        <button id="btnSignIn" class="btn btn-primary w-full h-11">Sign in</button>
+
+        <div id="authError" class="hidden p-3 rounded-lg bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200 text-sm"></div>
+
+        <div class="flex items-center gap-2 text-xs text-zinc-500">
+          <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-800"></div>
+          <span>Secure Access</span>
+          <div class="h-px flex-1 bg-zinc-200 dark:bg-zinc-800"></div>
+        </div>
+
+        <p class="text-xs text-zinc-500">
+          Having trouble? Contact an administrator to reset your access.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 
     <!-- App view -->
     <div id="appView" hidden>
@@ -92,13 +142,26 @@ refreshUI();
 document.getElementById('btnSignIn').onclick = async () => {
   const email = (document.getElementById('email').value || '').trim();
   const password = document.getElementById('password').value || '';
-  const errEl = document.getElementById('authError'); errEl.textContent = '';
+  const errEl = document.getElementById('authError');
+  errEl.classList.add('hidden'); errEl.textContent = '';
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) errEl.textContent = error.message;
+  if (error) { errEl.textContent = error.message; errEl.classList.remove('hidden'); }
 };
+
 document.getElementById('btnSignOut').onclick = async () => {
   await supabase.auth.signOut();
 };
+
+const togglePwdBtn = document.getElementById('togglePwd');
+if (togglePwdBtn) {
+  togglePwdBtn.onclick = () => {
+    const input = document.getElementById('password');
+    const isPw = input.type === 'password';
+    input.type = isPw ? 'text' : 'password';
+    togglePwdBtn.textContent = isPw ? 'Hide' : 'Show';
+  };
+}
+
 
 // Tiny router with guard
 const routes = { "/dashboard": renderDashboard, "/courses": renderCourses, "/students": renderStudents, "/login": renderLogin };
