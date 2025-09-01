@@ -1,292 +1,240 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>MathitHK Management System</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Tailwind (Play CDN) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'media',
-      theme: {
-        extend: {
-          colors: {
-            brand: { teal: '#37889b', red: '#ff5c5c', paper: '#f5f9ff' }
-          },
-          boxShadow: {
-            soft: '0 10px 30px rgba(0,0,0,.08)'
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    /* niceties */
-    .card { @apply bg-white dark:bg-zinc-900 rounded-2xl shadow-soft border border-zinc-200/60 dark:border-zinc-800; }
-    .btn  { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition; }
-    .btn-primary { @apply bg-brand-teal text-white hover:opacity-90; }
-    .btn-ghost   { @apply bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700; }
-    .input { @apply w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-teal; }
-    .pill  { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
-    .pill-green { @apply bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300; }
-    .pill-red   { @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300; }
-    .skeleton { @apply animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg; height: 14px; }
-  </style>
+<meta charset="utf-8" />
+<title>MathitHK Management</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode:'media',
+  theme:{ extend:{ colors:{ brand:{ teal:'#37889b', red:'#ff5c5c', paper:'#f5f9ff' } }, boxShadow:{ soft:'0 10px 30px rgba(0,0,0,.08)'} } }
+}
+</script>
+<style>
+.card{ @apply bg-white dark:bg-zinc-900 rounded-2xl shadow-soft border border-zinc-200/60 dark:border-zinc-800; }
+.btn{ @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition; }
+.btn-primary{ @apply bg-brand-teal text-white hover:opacity-90; }
+.btn-ghost{ @apply bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700; }
+.input{ @apply w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-teal; }
+.pill{ @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
+.pill-green{ @apply bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300; }
+.pill-red{ @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300; }
+.skeleton{ @apply animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg; height:14px; }
+</style>
 </head>
 <body class="bg-brand-paper dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">
-  <!-- Shell -->
-  <div class="min-h-screen">
-    <!-- Topbar -->
-    <header class="sticky top-0 z-40 backdrop-blur border-b border-zinc-200/70 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/60">
-      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl bg-brand-teal"></div>
-        <h1 class="text-lg font-semibold">MathitHK Management</h1>
-        <nav class="ml-auto flex gap-2">
-          <a href="#/dashboard" class="btn btn-ghost">Dashboard</a>
-          <a href="#/courses"   class="btn btn-ghost">Courses</a>
-          <a href="#/students"  class="btn btn-ghost">Student Lookup</a>
-        </nav>
+<div class="min-h-screen">
+  <!-- Topbar -->
+  <header class="sticky top-0 z-40 backdrop-blur border-b border-zinc-200/70 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/60">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-xl bg-brand-teal"></div>
+      <h1 class="text-lg font-semibold">MathitHK Management</h1>
+      <nav class="ml-auto flex gap-2" id="navLinks" hidden>
+        <a href="#/dashboard" class="btn btn-ghost">Dashboard</a>
+        <a href="#/courses"   class="btn btn-ghost">Courses</a>
+        <a href="#/students"  class="btn btn-ghost">Student Lookup</a>
+        <button id="btnSignOut" class="btn btn-ghost">Sign out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Auth view -->
+    <section id="authView" class="max-w-md mx-auto" hidden>
+      <div class="card p-6">
+        <h2 class="text-xl font-semibold mb-4">Sign in</h2>
+        <div class="space-y-3">
+          <input id="email" type="email" class="input" placeholder="Email" autocomplete="username" />
+          <input id="password" type="password" class="input" placeholder="Password" autocomplete="current-password" />
+          <button id="btnSignIn" class="btn btn-primary w-full">Sign in</button>
+          <div id="authError" class="text-sm text-red-600 dark:text-red-300"></div>
+          <p class="text-xs text-zinc-500 mt-2">Only pre-created accounts can sign in. Self-signup is disabled.</p>
+        </div>
       </div>
-    </header>
+    </section>
 
-    <!-- Page container -->
-    <main class="max-w-6xl mx-auto px-4 py-8">
+    <!-- App view -->
+    <div id="appView" hidden>
       <div id="view"></div>
-    </main>
-  </div>
+    </div>
+  </main>
+</div>
 
-  <!-- App -->
-  <script type="module">
-    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // TODO: 1) Replace with your project details
-    const SUPABASE_URL = "https://pezkjbjtvcapsubwlwgt.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlemtqYmp0dmNhcHN1Yndsd2d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2OTMyNTgsImV4cCI6MjA3MjI2OTI1OH0.spORN3rr34Io-SAdPLGyRzbNgBy2Vdw4UR0o0JrmcG8";
-    // Create client
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 1) Replace with your Supabase project
+const SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY";
 
-    // --- Tiny router ---
-    const routes = {
-      "/dashboard": renderDashboard,
-      "/courses": renderCourses,
-      "/students": renderStudents
-    };
-    function navigate() {
-      const hash = location.hash || "#/dashboard";
-      const path = hash.replace(/^#/, "");
-      (routes[path] || renderDashboard)();
-    }
-    window.addEventListener("hashchange", navigate);
-    window.addEventListener("load", navigate);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // --- UI helpers ---
-    const view = document.getElementById("view");
-    const fmtMoney = (n) => (n == null ? "-" : new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n));
-    const fmtDate  = (s) => s ? new Date(s).toLocaleString() : "-";
+// Elements
+const authView = document.getElementById('authView');
+const appView  = document.getElementById('appView');
+const navLinks = document.getElementById('navLinks');
+const view     = document.getElementById('view');
 
-    // --- Dashboard (placeholder) ---
-    async function renderDashboard() {
-      view.innerHTML = `
-        <section class="grid md:grid-cols-3 gap-6">
-          <div class="card p-6">
-            <h2 class="font-semibold mb-2">New Enrolments (This Week)</h2>
-            <div class="skeleton w-1/2 mb-2"></div>
-            <p class="text-sm text-zinc-500">Chart placeholder</p>
+// Auth state handling
+async function refreshUI() {
+  const { data: { session } } = await supabase.auth.getSession();
+  const authed = !!session;
+  authView.hidden = authed;
+  appView.hidden  = !authed;
+  navLinks.hidden = !authed;
+  if (authed) navigate(); else location.hash = '#/login';
+}
+supabase.auth.onAuthStateChange((_e,_s)=>refreshUI());
+refreshUI();
+
+// Sign in / out
+document.getElementById('btnSignIn').onclick = async () => {
+  const email = (document.getElementById('email').value || '').trim();
+  const password = document.getElementById('password').value || '';
+  const errEl = document.getElementById('authError'); errEl.textContent = '';
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) errEl.textContent = error.message;
+};
+document.getElementById('btnSignOut').onclick = async () => {
+  await supabase.auth.signOut();
+};
+
+// Tiny router with guard
+const routes = { "/dashboard": renderDashboard, "/courses": renderCourses, "/students": renderStudents, "/login": renderLogin };
+function navigate(){
+  const path = (location.hash || '#/dashboard').replace(/^#/,'');
+  // guard: if not authed, always show login
+  supabase.auth.getSession().then(({data:{session}})=>{
+    if(!session) return renderLogin();
+    (routes[path] || renderDashboard)();
+  });
+}
+window.addEventListener('hashchange', navigate);
+
+// Views
+function renderLogin(){
+  authView.hidden = false; appView.hidden = true; navLinks.hidden = true;
+}
+
+function renderDashboard(){
+  appView.hidden = false; authView.hidden = true;
+  view.innerHTML = `
+    <section class="grid md:grid-cols-3 gap-6">
+      <div class="card p-6"><h2 class="font-semibold mb-2">New Enrolments (This Week)</h2><div class="skeleton w-1/2 mb-2"></div><p class="text-sm text-zinc-500">Chart placeholder</p></div>
+      <div class="card p-6"><h2 class="font-semibold mb-2">New Students</h2><div class="skeleton w-2/3 mb-2"></div><p class="text-sm text-zinc-500">Chart placeholder</p></div>
+      <div class="card p-6"><h2 class="font-semibold mb-2">Revenue (MTD)</h2><div class="skeleton w-1/3 mb-2"></div><p class="text-sm text-zinc-500">Chart placeholder</p></div>
+    </section>`;
+}
+
+const fmtMoney = (n)=> n==null?'-':new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(n);
+const fmtDate = (s)=> s? new Date(s).toLocaleString() : '-';
+function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeOr(s){ return String(s).replace(/[,()]/g,"\\$&"); }
+
+async function renderCourses(){
+  appView.hidden = false; authView.hidden = true;
+  view.innerHTML = `
+  <section class="card p-6">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+      <h2 class="text-xl font-semibold">Courses</h2>
+      <div class="sm:ml-auto flex gap-2">
+        <input id="qCourse" class="input" placeholder="Search by name or ID...">
+        <button id="btnCourseSearch" class="btn btn-primary">Search</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-zinc-600 dark:text-zinc-400">
+          <th class="py-2">ID</th><th class="py-2">Name</th><th class="py-2">Year</th>
+          <th class="py-2">Duration</th><th class="py-2">Price</th><th class="py-2">Free</th><th class="py-2">Created</th>
+        </tr></thead>
+        <tbody id="courseRows"></tbody>
+      </table>
+    </div>
+  </section>`;
+  const rowsEl = document.getElementById('courseRows');
+  const load = async (term='')=>{
+    rowsEl.innerHTML = '';
+    let q = supabase.from('course').select('course_id,course_name,year,duration,price,free_course,create_date')
+      .order('create_date',{ascending:false}).limit(200);
+    if(term) q = q.or(`course_name.ilike.%${term}%,course_id.ilike.%${term}%`);
+    const { data, error } = await q;
+    if(error){ rowsEl.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-red-600">${escapeHtml(error.message)}</td></tr>`; return; }
+    if(!data?.length){ rowsEl.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-zinc-500">No courses found.</td></tr>`; return; }
+    rowsEl.innerHTML = data.map(c=>`
+      <tr class="border-t border-zinc-200/70 dark:border-zinc-800">
+        <td class="py-2 font-medium">${c.course_id}</td>
+        <td class="py-2">${escapeHtml(c.course_name)}</td>
+        <td class="py-2">${c.year ?? '-'}</td>
+        <td class="py-2">${c.duration ?? '-'}</td>
+        <td class="py-2">${fmtMoney(Number(c.price))}</td>
+        <td class="py-2">${c.free_course?'<span class="pill pill-green">Free</span>':'<span class="pill pill-red">Paid</span>'}</td>
+        <td class="py-2">${c.create_date ?? '-'}</td>
+      </tr>`).join('');
+  };
+  document.getElementById('btnCourseSearch').onclick = ()=> load(document.getElementById('qCourse').value.trim());
+  document.getElementById('qCourse').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('btnCourseSearch').click(); });
+  load();
+}
+
+async function renderStudents(){
+  appView.hidden = false; authView.hidden = true;
+  view.innerHTML = `
+  <section class="card p-6">
+    <h2 class="text-xl font-semibold mb-4">Find Student</h2>
+    <div class="grid sm:grid-cols-3 gap-3 mb-4">
+      <input id="qById" class="input" placeholder="Search by Student ID">
+      <input id="qByEmail" class="input" placeholder="Search by Email">
+      <input id="qByPhone" class="input" placeholder="Search by WhatsApp / Phone">
+    </div>
+    <div class="flex gap-2 mb-4">
+      <button id="btnStudentSearch" class="btn btn-primary">Search</button>
+      <button id="btnStudentClear" class="btn btn-ghost">Clear</button>
+    </div>
+    <div id="studentResult" class="space-y-4"></div>
+  </section>`;
+  const resEl = document.getElementById('studentResult');
+  const search = async ()=>{
+    const id = document.getElementById('qById').value.trim();
+    const email = document.getElementById('qByEmail').value.trim();
+    const phone = document.getElementById('qByPhone').value.trim();
+    resEl.innerHTML = '';
+    let q = supabase.from('student').select('*').limit(25);
+    const ors=[]; if(id) ors.push(`student_id.eq.${id}`); if(email) ors.push(`email.ilike.%${escapeOr(email)}%`); if(phone) ors.push(`phone_number.ilike.%${escapeOr(phone)}%`);
+    if(ors.length) q = q.or(ors.join(','));
+    q = q.order('last_sign_in',{ascending:false});
+    const { data, error } = await q;
+    if(error){ resEl.innerHTML = `<div class="text-red-600">${escapeHtml(error.message)}</div>`; return; }
+    if(!data?.length){ resEl.innerHTML = `<div class="text-zinc-500">No matching student found.</div>`; return; }
+    resEl.innerHTML = data.map(s=>`
+      <div class="card p-5">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="text-lg font-semibold">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</div>
+            <div class="text-sm text-zinc-600 dark:text-zinc-400">${s.student_id}</div>
           </div>
-          <div class="card p-6">
-            <h2 class="font-semibold mb-2">New Students</h2>
-            <div class="skeleton w-2/3 mb-2"></div>
-            <p class="text-sm text-zinc-500">Chart placeholder</p>
-          </div>
-          <div class="card p-6">
-            <h2 class="font-semibold mb-2">Revenue (Month-to-date)</h2>
-            <div class="skeleton w-1/3 mb-2"></div>
-            <p class="text-sm text-zinc-500">Chart placeholder</p>
-          </div>
-        </section>
-
-        <section class="mt-8 grid md:grid-cols-2 gap-6">
-          <div class="card p-6">
-            <h3 class="font-semibold mb-3">Quick Actions</h3>
-            <div class="flex gap-2">
-              <a href="#/courses" class="btn btn-primary">View Courses</a>
-              <a href="#/students" class="btn btn-ghost">Find Student</a>
-            </div>
-          </div>
-          <div class="card p-6">
-            <h3 class="font-semibold mb-3">Notes</h3>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400">
-              This dashboard is a placeholder. We’ll drop in charts (e.g., enrolments, new students)
-              here later using your Supabase data.
-            </p>
-          </div>
-        </section>
-      `;
-    }
-
-    // --- Courses page ---
-    async function renderCourses() {
-      view.innerHTML = `
-        <section class="card p-6">
-          <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-            <h2 class="text-xl font-semibold">Courses</h2>
-            <div class="sm:ml-auto flex gap-2">
-              <input id="qCourse" class="input" placeholder="Search by name or ID..." />
-              <button id="btnCourseSearch" class="btn btn-primary">Search</button>
-            </div>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead>
-                <tr class="text-left text-zinc-600 dark:text-zinc-400">
-                  <th class="py-2">ID</th>
-                  <th class="py-2">Name</th>
-                  <th class="py-2">Year</th>
-                  <th class="py-2">Duration</th>
-                  <th class="py-2">Price</th>
-                  <th class="py-2">Free</th>
-                  <th class="py-2">Created</th>
-                </tr>
-              </thead>
-              <tbody id="courseRows"></tbody>
-            </table>
-          </div>
-        </section>
-      `;
-
-      const rowsEl = document.getElementById("courseRows");
-      const load = async (term="") => {
-        rowsEl.innerHTML = "";
-        // Query: public.course
-        let q = supabase.from("course")
-          .select("course_id, course_name, year, duration, price, free_course, create_date")
-          .order("create_date", { ascending: false })
-          .limit(200);
-
-        if (term) {
-          // ilike name OR id contains
-          q = q.or(`course_name.ilike.%${term}%,course_id.ilike.%${term}%`);
-        }
-
-        const { data, error } = await q;
-        if (error) { rowsEl.innerHTML = renderError(error.message); return; }
-        if (!data || !data.length) {
-          rowsEl.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-zinc-500">No courses found.</td></tr>`;
-          return;
-        }
-        rowsEl.innerHTML = data.map(c => `
-          <tr class="border-t border-zinc-200/70 dark:border-zinc-800">
-            <td class="py-2 font-medium">${c.course_id}</td>
-            <td class="py-2">${escapeHtml(c.course_name)}</td>
-            <td class="py-2">${c.year ?? "-"}</td>
-            <td class="py-2">${c.duration ?? "-"}</td>
-            <td class="py-2">${fmtMoney(Number(c.price))}</td>
-            <td class="py-2">${c.free_course ? `<span class="pill pill-green">Free</span>` : `<span class="pill pill-red">Paid</span>`}</td>
-            <td class="py-2">${c.create_date ?? "-"}</td>
-          </tr>
-        `).join("");
-      };
-
-      document.getElementById("btnCourseSearch").onclick = () => {
-        load(document.getElementById("qCourse").value.trim());
-      };
-      document.getElementById("qCourse").addEventListener("keydown", e => {
-        if (e.key === "Enter") document.getElementById("btnCourseSearch").click();
-      });
-
-      load();
-    }
-
-    // --- Student Lookup page ---
-    async function renderStudents() {
-      view.innerHTML = `
-        <section class="card p-6">
-          <h2 class="text-xl font-semibold mb-4">Find Student</h2>
-          <div class="grid sm:grid-cols-3 gap-3 mb-4">
-            <input id="qById"    class="input" placeholder="Search by Student ID" />
-            <input id="qByEmail" class="input" placeholder="Search by Email" />
-            <input id="qByPhone" class="input" placeholder="Search by WhatsApp / Phone" />
-          </div>
-          <div class="flex gap-2 mb-4">
-            <button id="btnStudentSearch" class="btn btn-primary">Search</button>
-            <button id="btnStudentClear"  class="btn btn-ghost">Clear</button>
-          </div>
-
-          <div id="studentResult" class="space-y-4"></div>
-        </section>
-      `;
-
-      const resEl = document.getElementById("studentResult");
-
-      const search = async () => {
-        const id    = document.getElementById("qById").value.trim();
-        const email = document.getElementById("qByEmail").value.trim();
-        const phone = document.getElementById("qByPhone").value.trim();
-
-        resEl.innerHTML = "";
-
-        // Build a combined OR filter against public.student
-        let q = supabase.from("student").select("*").limit(25);
-
-        const ors = [];
-        if (id)    ors.push(`student_id.eq.${escapeOr(id)}`);
-        if (email) ors.push(`email.ilike.%${escapeOr(email)}%`);
-        if (phone) ors.push(`phone_number.ilike.%${escapeOr(phone)}%`);
-
-        if (ors.length) q = q.or(ors.join(","));
-        // Optional: order by last_sign_in desc
-        q = q.order("last_sign_in", { ascending: false });
-
-        const { data, error } = await q;
-        if (error) { resEl.innerHTML = renderError(error.message); return; }
-        if (!data || !data.length) {
-          resEl.innerHTML = `<div class="text-zinc-500">No matching student found.</div>`;
-          return;
-        }
-
-        resEl.innerHTML = data.map(s => `
-          <div class="card p-5">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <div class="text-lg font-semibold">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</div>
-                <div class="text-sm text-zinc-600 dark:text-zinc-400">${s.student_id}</div>
-              </div>
-              <div>
-                ${s.is_active ? `<span class="pill pill-green">Active</span>` : `<span class="pill pill-red">Inactive</span>`}
-              </div>
-            </div>
-            <div class="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div><span class="text-zinc-500">Email:</span> ${escapeHtml(s.email ?? "-")}</div>
-              <div><span class="text-zinc-500">WhatsApp:</span> ${escapeHtml(s.phone_number ?? "-")}</div>
-              <div><span class="text-zinc-500">DSE Year:</span> ${escapeHtml(s.dse_year ?? "-")}</div>
-              <div><span class="text-zinc-500">Current Level:</span> ${escapeHtml(s.current_level ?? "-")}</div>
-              <div><span class="text-zinc-500">Last Sign In:</span> ${fmtDate(s.last_sign_in)}</div>
-              <div><span class="text-zinc-500">Created:</span> ${fmtDate(s.date_created)}</div>
-            </div>
-          </div>
-        `).join("");
-      };
-
-      document.getElementById("btnStudentSearch").onclick = search;
-      document.getElementById("btnStudentClear").onclick = () => {
-        ["qById","qByEmail","qByPhone"].forEach(id => document.getElementById(id).value = "");
-        resEl.innerHTML = "";
-      };
-    }
-
-    // --- utils ---
-    function renderError(msg) {
-      return `<div class="p-4 rounded-xl bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200">Error: ${escapeHtml(msg)}</div>`;
-    }
-    function escapeHtml(s) {
-      if (s == null) return "";
-      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-    function escapeOr(s) {
-      // Escape commas/parentheses which have meaning in Supabase 'or' syntax
-      return String(s).replace(/[,()]/g, "\\$&");
-    }
-  </script>
+          <div>${s.is_active?'<span class="pill pill-green">Active</span>':'<span class="pill pill-red">Inactive</span>'}</div>
+        </div>
+        <div class="mt-3 grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          <div><span class="text-zinc-500">Email:</span> ${escapeHtml(s.email ?? '-')}</div>
+          <div><span class="text-zinc-500">WhatsApp:</span> ${escapeHtml(s.phone_number ?? '-')}</div>
+          <div><span class="text-zinc-500">DSE Year:</span> ${escapeHtml(s.dse_year ?? '-')}</div>
+          <div><span class="text-zinc-500">Current Level:</span> ${escapeHtml(s.current_level ?? '-')}</div>
+          <div><span class="text-zinc-500">Last Sign In:</span> ${fmtDate(s.last_sign_in)}</div>
+          <div><span class="text-zinc-500">Created:</span> ${fmtDate(s.date_created)}</div>
+        </div>
+      </div>`).join('');
+  };
+  document.getElementById('btnStudentSearch').onclick = search;
+  document.getElementById('btnStudentClear').onclick = ()=>{ ['qById','qByEmail','qByPhone'].forEach(id=>document.getElementById(id).value=''); resEl.innerHTML=''; };
+}
+</script>
 </body>
 </html>
+<!--
+  MathitHK Management System
+  https://mathit.hk
+  (c) Mathit Limited
+  License: MIT
+  Developer: Oscar Yuen
