@@ -5,80 +5,100 @@
 <title>MathitHK Management</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<!-- Inter font for nicer typography -->
+<!-- Inter font -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" href="https://import.cdn.thinkific.com/511760%2Fcustom_site_themes%2Fid%2FSA5ahBWQQqmUn2xd46cO_Copy%20of%20Course%20Cover%20(1).png?width=384&dpr=2">
 
-<!-- Tailwind config BEFORE CDN (Play CDN style) -->
+<!-- Tailwind config BEFORE CDN -->
 <script>
-  window.tailwind = {
-    config: {
-      darkMode: 'media',
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
-          colors: { brand: { teal: '#37889b', red: '#ff5c5c', paper: '#f5f9ff' } },
-          boxShadow: { soft: '0 10px 30px rgba(0,0,0,.08)' }
-        }
+  window.tailwind = window.tailwind || {};
+  tailwind.config = {
+    darkMode: 'class', // manual dark to avoid auto-black UI
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+        colors: { brand: { teal: '#37889b', red: '#ff5c5c', paper: '#f5f9ff' } },
+        boxShadow: { soft: '0 10px 30px rgba(0,0,0,.08)' }
       }
     }
-  }
+  };
 </script>
-<script src="https://cdn.tailwindcss.com"></script>
 
-<!-- Component layer -->
-<script type="text/tailwindcss">
+<!-- Play CDN (cache-busted once) -->
+<script src="https://cdn.tailwindcss.com?plugins=forms&v=2"></script>
+
+<!-- Your Tailwind layers -->
+<style type="text/tailwindcss">
+@layer base {
+  table { @apply w-full border-collapse text-sm text-zinc-800; }
+  th    { @apply text-left font-semibold text-zinc-900; }
+  td    { @apply text-zinc-800; }
+  tbody tr       { @apply border-b border-zinc-200; }
+  tbody tr:hover { @apply bg-zinc-50; }
+  html { @apply font-sans; }
+  body { @apply text-zinc-900; }
+  a { @apply text-inherit no-underline; }
+
+  /* Inputs */
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="search"], input[type="tel"], input[type="number"],
+  textarea, select {
+    @apply w-full rounded-2xl border bg-white text-zinc-900
+           px-3.5 h-11 placeholder:text-zinc-500
+           shadow-sm shadow-black/[0.03]
+           focus:outline-none focus:ring-2;
+    color-scheme: light;
+  }
+  input:focus, textarea:focus, select:focus {
+    --tw-ring-color: theme('colors.brand.teal / 0.6');
+    border-color: theme('colors.brand.teal / 0.6');
+  }
+
+  /* Buttons */
+  button {
+    @apply inline-flex items-center justify-center rounded-xl
+           px-4 h-11 font-medium border bg-white text-zinc-900
+           shadow-sm shadow-black/[0.04] transition
+           focus-visible:outline-none focus-visible:ring-2;
+  }
+  button:focus-visible { --tw-ring-color: theme('colors.brand.teal / 0.6'); }
+  button:disabled { @apply opacity-60 cursor-not-allowed; }
+}
+
 @layer components {
   .wrap { @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
 
+  /* Use a plain CSS box-shadow instead of @apply shadow-soft (custom) */
   .card {
-    @apply bg-white dark:bg-zinc-900 rounded-2xl shadow-soft border border-zinc-200/60 dark:border-zinc-800;
+    @apply bg-white rounded-2xl border border-zinc-200/60;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
   }
 
-  .btn {
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal;
+  .input { @apply w-full rounded-2xl border bg-white text-zinc-900 px-3.5 h-11 placeholder:text-zinc-500 shadow-sm focus:outline-none focus:ring-2; }
+  .input:focus { --tw-ring-color: theme('colors.brand.teal / 0.6'); border-color: theme('colors.brand.teal / 0.6'); }
+
+  .btn { @apply inline-flex items-center justify-center rounded-xl px-4 h-11 font-medium border bg-white text-zinc-900 shadow-sm transition focus-visible:outline-none focus-visible:ring-2; }
+  .btn:focus-visible { --tw-ring-color: theme('colors.brand.teal / 0.6'); }
+
+  /* Use a concrete red shade; DEFAULT is invalid */
+  .btn-primary { background-color: theme('colors.brand.teal'); color:#fff; border-color: transparent; }
+  .btn-ghost  { @apply bg-white text-zinc-800 hover:bg-zinc-100; }
+  .btn-danger { background-color: theme('colors.red.600'); color:#fff; border-color: transparent; }
+  .btn-danger:hover { background-color: theme('colors.red.500'); }
+
+  .navlink{
+    @apply relative inline-flex items-center rounded-xl px-3.5 h-10
+           text-sm sm:text-base font-medium
+           text-zinc-600 hover:text-zinc-900
+           border-0 bg-transparent shadow-none;
   }
-  .btn:disabled { @apply opacity-60 cursor-not-allowed; }
-  .btn-primary { @apply bg-brand-teal text-white hover:opacity-90; }
-  .btn-ghost   { @apply bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700; }
-  .btn-danger  { @apply bg-red-600 text-white hover:bg-red-500; }
-
-  .navlink { @apply btn btn-ghost text-sm sm:text-base; }
-  .navlink[data-active="true"] { @apply bg-brand-teal/10 text-brand-teal; }
-
-  .input{ @apply w-full rounded-xl border border-zinc-300 bg-white text-zinc-900
-           placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-brand-teal;
-    color-scheme: light; /* non-Tailwind, but crucial */
+  .navlink::after{
+    content:""; @apply absolute left-3.5 right-3.5 -bottom-[6px] h-[2px] rounded-full bg-transparent transition;
   }
-
-  .pill{ @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium; }
-  .pill-green{ @apply bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300; }
-  .pill-red{ @apply bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300; }
-  .skeleton{ @apply animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-lg h-[14px]; }
-
-  .spinner { @apply inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent; }
+  .navlink[data-active="true"]{ @apply text-zinc-900; }
+  .navlink[data-active="true"]::after{ background-color: theme('colors.brand.teal'); }
 }
-</script>
-
-<style id="force-light-inputs">
-  /* Keep form fields light regardless of page dark mode */
-  input, textarea, select {
-    background-color: #ffffff !important;
-    color: #111827 !important;         /* zinc-900 */
-    caret-color: #111827 !important;
-    color-scheme: light;                /* opt out of dark UA styling */
-  }
-
-  /* Defeat Chrome/Edge autofill + some dark extensions */
-  input:-webkit-autofill,
-  textarea:-webkit-autofill,
-  select:-webkit-autofill {
-    -webkit-text-fill-color: #111827 !important;
-    transition: background-color 99999s ease-out; /* prevent yellow flash */
-  }
 </style>
 
 <style>
@@ -86,16 +106,16 @@
   input, textarea { color:#111;}
 </style>
 </head>
-
-<body class="bg-gradient-to-b from-brand-paper to-white dark:from-zinc-950 dark:to-zinc-950 text-zinc-900 dark:text-zinc-50">
+<body class="bg-gradient-to-b from-brand-paper to-white text-zinc-900">
 <div class="min-h-screen flex flex-col">
   <!-- Topbar -->
   <header class="sticky top-0 z-40 border-b border-zinc-200/70 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/70 backdrop-blur">
     <div class="wrap py-3 flex items-center gap-3">
-      <a href="#/dashboard" class="flex items-center gap-2">
-        <div class="w-9 h-9 rounded-xl bg-brand-teal"></div>
-        <span class="text-base sm:text-lg font-semibold">MathitHK Management</span>
-      </a>
+      <a href="#/dashboard" class="flex items-center gap-2">&nbsp;
+  <img src="assets/favicon.png" alt="Logo" class="w-8 h-8">
+  <span class="text-base sm:text-lg font-semibold">MathitHK Management System</span>
+</a>
+
 
       <!-- Desktop nav -->
       <nav class="ml-auto hidden md:flex gap-2" id="navLinks" hidden>
@@ -203,298 +223,6 @@
   </footer>
 </div>
 
-<script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// --- Supabase ---
-const SUPABASE_URL = "https://pezkjbjtvcapsubwlwgt.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlemtqYmp0dmNhcHN1Yndsd2d0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2OTMyNTgsImV4cCI6MjA3MjI2OTI1OH0.spORN3rr34Io-SAdPLGyRzbNgBy2Vdw4UR0o0JrmcG8";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// --- Elements ---
-const authView  = document.getElementById('authView');
-const appView   = document.getElementById('appView');
-const navLinks  = document.getElementById('navLinks');
-const view      = document.getElementById('view');
-const btnMenu   = document.getElementById('btnMenu');
-const mobileNav = document.getElementById('mobileNav');
-
-// --- Auth/UI wiring ---
-async function refreshUI() {
-  const { data: { session } } = await supabase.auth.getSession();
-  const authed = !!session;
-
-  authView.hidden  = authed;
-  appView.hidden   = !authed;
-  navLinks.hidden  = !authed;
-
-  // Show/hide mobile trigger and panel
-  btnMenu.hidden   = !authed;
-  if (!authed) mobileNav.classList.add('hidden');
-
-  if (authed) navigate(); else location.hash = '#/login';
-}
-
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log('[auth] onAuthStateChange:', event, !!session);
-  refreshUI();
-});
-
-// Sign in (with spinner)
-const signInBtn = document.getElementById('btnSignIn');
-if (signInBtn) {
-  signInBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const email = (document.getElementById('email')?.value || '').trim();
-    const password = document.getElementById('password')?.value || '';
-    const errEl = document.getElementById('authError');
-
-    errEl.classList.add('hidden'); errEl.textContent = '';
-    const prevHTML = signInBtn.innerHTML;
-    signInBtn.disabled = true;
-    signInBtn.innerHTML = '<span class="spinner mr-2"></span>Signing in…';
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      console.log('[auth] signIn result:', { data, error });
-      if (error) {
-        errEl.textContent = error.message || 'Sign in failed';
-        errEl.classList.remove('hidden');
-      } else if (!data?.session) {
-        errEl.textContent = 'Signed in but no session. Check email confirmation or Auth settings.';
-        errEl.classList.remove('hidden');
-      }
-    } catch (ex) {
-      errEl.textContent = 'Unexpected error: ' + (ex?.message || ex);
-      errEl.classList.remove('hidden');
-    } finally {
-      signInBtn.disabled = false;
-      signInBtn.innerHTML = prevHTML;
-    }
-  });
-}
-
-// Sign out (both navs)
-document.getElementById('btnSignOut')?.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  location.hash = '#/login';
-});
-document.getElementById('btnSignOutMobile')?.addEventListener('click', async () => {
-  await supabase.auth.signOut();
-  location.hash = '#/login';
-  mobileNav.classList.add('hidden');
-  btnMenu.setAttribute('aria-expanded', 'false');
-});
-
-// Mobile menu toggle
-btnMenu?.addEventListener('click', () => {
-  const isHidden = mobileNav.classList.toggle('hidden');
-  btnMenu.setAttribute('aria-expanded', (!isHidden).toString());
-});
-
-// Active nav highlight
-function setActiveNav() {
-  const path = (location.hash || '#/dashboard').replace(/^#/, '');
-  const current = `#${path}`;
-  document.querySelectorAll('[data-nav]').forEach(a => {
-    a.dataset.active = (a.getAttribute('href') === current);
-  });
-  // close mobile panel after navigation tap
-  if (!mobileNav.classList.contains('hidden')) {
-    mobileNav.classList.add('hidden');
-    btnMenu.setAttribute('aria-expanded', 'false');
-  }
-}
-
-// --- Router with guard ---
-const routes = {
-  "/dashboard": renderDashboard,
-  "/courses": renderCourses,
-  "/students": renderStudents,
-  "/login": renderLogin
-};
-
-async function navigate(){
-  const path = (location.hash || '#/dashboard').replace(/^#/, '');
-  const { data:{ session } } = await supabase.auth.getSession();
-
-  if (!session) {
-    if (path !== '/login') location.hash = '#/login';
-    renderLogin();
-    setActiveNav();
-    return;
-  }
-
-  if (path === '/login' || path === '') {
-    location.hash = '#/dashboard';
-    renderDashboard();
-    setActiveNav();
-    return;
-  }
-
-  (routes[path] || renderDashboard)();
-  setActiveNav();
-}
-
-window.addEventListener('hashchange', navigate);
-window.addEventListener('load', navigate);
-
-// --- Views ---
-function renderLogin(){ authView.hidden = false; appView.hidden = true; navLinks.hidden = true; }
-
-function renderDashboard(){
-  appView.hidden = false; authView.hidden = true;
-  view.innerHTML = `
-    <section class="grid gap-6 md:grid-cols-3">
-      <div class="card p-6">
-        <h2 class="font-semibold mb-2">New Enrolments (This Week)</h2>
-        <div class="skeleton w-1/2 mb-2"></div>
-        <p class="text-sm text-zinc-500">Chart placeholder</p>
-      </div>
-      <div class="card p-6">
-        <h2 class="font-semibold mb-2">New Students</h2>
-        <div class="skeleton w-2/3 mb-2"></div>
-        <p class="text-sm text-zinc-500">Chart placeholder</p>
-      </div>
-      <div class="card p-6">
-        <h2 class="font-semibold mb-2">Revenue (MTD)</h2>
-        <div class="skeleton w-1/3 mb-2"></div>
-        <p class="text-sm text-zinc-500">Chart placeholder</p>
-      </div>
-    </section>`;
-}
-
-const fmtMoney = (n)=> n==null?'-':new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(n);
-const fmtDate = (s)=> s? new Date(s).toLocaleString() : '-';
-function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function escapeOr(s){ return String(s).replace(/[,()]/g,"\\$&"); }
-
-async function renderCourses(){
-  appView.hidden = false; authView.hidden = true;
-  view.innerHTML = `
-  <section class="card p-6">
-    <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-      <h2 class="text-xl font-semibold">Courses</h2>
-      <div class="sm:ml-auto flex gap-2 w-full sm:w-auto">
-        <input id="qCourse" class="input h-11 flex-1" placeholder="Search by name or ID...">
-        <button id="btnCourseSearch" class="btn btn-primary h-11">Search</button>
-      </div>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="text-left text-zinc-600 dark:text-zinc-400">
-            <th class="py-2">ID</th><th class="py-2">Name</th><th class="py-2">Year</th>
-            <th class="py-2">Duration</th><th class="py-2">Price</th><th class="py-2">Free</th><th class="py-2">Created</th>
-          </tr>
-        </thead>
-        <tbody id="courseRows"></tbody>
-      </table>
-    </div>
-  </section>`;
-  const rowsEl = document.getElementById('courseRows');
-  const load = async (term='')=>{
-    rowsEl.innerHTML = '';
-    let q = supabase.from('course').select('course_id,course_name,year,duration,price,free_course,create_date')
-      .order('create_date',{ascending:false}).limit(200);
-    if(term) q = q.or(`course_name.ilike.%${term}%,course_id.ilike.%${term}%`);
-    const { data, error } = await q;
-    if(error){ rowsEl.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-red-600">${escapeHtml(error.message)}</td></tr>`; return; }
-    if(!data?.length){ rowsEl.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-zinc-500">No courses found.</td></tr>`; return; }
-    rowsEl.innerHTML = data.map(c=>`
-      <tr class="border-t border-zinc-200/70 dark:border-zinc-800">
-        <td class="py-2 font-medium">${c.course_id}</td>
-        <td class="py-2">${escapeHtml(c.course_name)}</td>
-        <td class="py-2">${c.year ?? '-'}</td>
-        <td class="py-2">${c.duration ?? '-'}</td>
-        <td class="py-2">${fmtMoney(Number(c.price))}</td>
-        <td class="py-2">${c.free_course?'<span class="pill pill-green">Free</span>':'<span class="pill pill-red">Paid</span>'}</td>
-        <td class="py-2">${c.create_date ?? '-'}</td>
-      </tr>`).join('');
-  };
-  document.getElementById('btnCourseSearch').onclick = ()=> load(document.getElementById('qCourse').value.trim());
-  document.getElementById('qCourse').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('btnCourseSearch').click(); });
-  load();
-}
-
-async function renderStudents(){
-  appView.hidden=false; authView.hidden=true;
-  view.innerHTML = `
-  <section class="card p-6">
-    <h2 class="text-xl font-semibold mb-4">Find Student</h2>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-      <input id="qFirst" class="input h-11" placeholder="First name">
-      <input id="qLast"  class="input h-11" placeholder="Last name">
-      <input id="qEmail" class="input h-11" placeholder="Email">
-      <input id="qPhone" class="input h-11" placeholder="WhatsApp / Phone">
-    </div>
-    <div class="flex flex-col sm:flex-row gap-2 mb-4">
-      <button id="btnStudentSearch" class="btn btn-primary h-11">Search</button>
-      <button id="btnStudentClear" class="btn btn-ghost h-11">Clear</button>
-    </div>
-    <div id="studentResult" class="grid md:grid-cols-2 gap-4"></div>
-  </section>`;
-  const resEl = document.getElementById('studentResult');
-
-  const search = async ()=>{
-    const first = document.getElementById('qFirst').value.trim();
-    const last  = document.getElementById('qLast').value.trim();
-    const email = document.getElementById('qEmail').value.trim();
-    const phone = document.getElementById('qPhone').value.trim();
-    resEl.innerHTML = '';
-
-    if(!first && !last && !email && !phone){
-      resEl.innerHTML = `<div class="text-zinc-500">Enter at least one field to search.</div>`;
-      return;
-    }
-
-    let q = supabase.from('student').select('*').limit(50);
-    const ors = [];
-    if (first) ors.push(`first_name.ilike.%${escapeOr(first)}%`);
-    if (last)  ors.push(`last_name.ilike.%${escapeOr(last)}%`);
-    if (email) ors.push(`email.ilike.%${escapeOr(email)}%`);
-    if (phone) ors.push(`phone_number.ilike.%${escapeOr(phone)}%`);
-    q = q.or(ors.join(',')).order('last_sign_in', { ascending:false });
-
-    const { data, error } = await q;
-    if (error) { resEl.innerHTML = `<div class="text-red-600">${escapeHtml(error.message)}</div>`; return; }
-    if (!data?.length) { resEl.innerHTML = `<div class="text-zinc-500">No matching students.</div>`; return; }
-
-    resEl.innerHTML = data.map(s=> studentCard(s)).join('');
-    data.forEach(s=>{
-      const el = document.getElementById(`stu-${cssId(s.student_id)}`);
-      if(el) el.onclick = ()=> { location.hash = `#/student/${encodeURIComponent(s.student_id)}`; };
-    });
-  };
-
-  document.getElementById('btnStudentSearch').onclick = search;
-  document.getElementById('btnStudentClear').onclick = ()=>{
-    ['qFirst','qLast','qEmail','qPhone'].forEach(id=>document.getElementById(id).value='');
-    resEl.innerHTML = '';
-  };
-}
-
-function cssId(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, '_'); }
-function studentCard(s){
-  return `
-  <div id="stu-${cssId(s.student_id)}" class="card p-5 hover:ring-2 hover:ring-brand-teal/60 transition cursor-pointer">
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <div class="text-lg font-semibold">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</div>
-        <div class="text-sm text-zinc-600 dark:text-zinc-400">${escapeHtml(s.email ?? '')}</div>
-      </div>
-      <div>${s.is_active?'<span class="pill pill-green">Active</span>':'<span class="pill pill-red">Inactive</span>'}</div>
-    </div>
-    <div class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-      <span class="mr-4">ID: ${escapeHtml(s.student_id)}</span>
-      <span>WhatsApp: ${escapeHtml(s.phone_number ?? '-')}</span>
-    </div>
-  </div>`;
-}
-
-// Show login immediately, then reconcile
-renderLogin();
-refreshUI();
-</script>
+<script type="module" src="/js/app.js"></script>
 </body>
 </html>
