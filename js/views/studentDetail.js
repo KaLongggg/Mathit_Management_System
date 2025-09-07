@@ -64,7 +64,7 @@ export async function renderStudentDetail(id){
             <span class="block font-medium mb-1">Email</span>
             ${
               editMode
-                ? `<input id="email" type="email" class="input h-11" value="${escapeHtml(s.email ?? '')}" />`
+                ? `<input id="student_email" type="email" class="input h-11" value="${escapeHtml(s.email ?? '')}" />`
                 : `<div class="h-11 flex items-center break-all">${escapeHtml(s.email ?? '-')}</div>`
             }
           </label>
@@ -122,7 +122,7 @@ export async function renderStudentDetail(id){
       const payload = {
         first_name:   document.getElementById('first_name')?.value ?? s.first_name ?? null,
         last_name:    document.getElementById('last_name')?.value ?? s.last_name ?? null,
-        email:        document.getElementById('email')?.value ?? s.email ?? null,
+        email: (document.getElementById('student_email')?.value || '').trim() || s.email || null,
         phone_number: document.getElementById('phone_number')?.value ?? s.phone_number ?? null,
         is_active:    (document.getElementById('is_active')?.value ?? (s.is_active ? 'true' : 'false')) === 'true'
       };
