@@ -101,6 +101,29 @@ export async function renderStudentDetail(id){
 
         <div id="err" class="mt-3 hidden p-3 rounded-lg bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200 text-sm"></div>
       </section>
+   <section class="card p-6 mt-6">
+      <div class="flex items-center justify-between gap-3">
+        <h3 class="text-lg font-semibold">Enrolments</h3>
+        <a id="btnAddEnrol" class="btn btn-primary" href="#/enrolment/new">＋ Add enrolment</a>
+      </div>
+      <div class="mt-4 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-zinc-600 dark:text-zinc-400">
+              <th class="py-2 pr-3">Enrolment ID</th>
+              <th class="py-2 pr-3">Course ID</th>
+              <th class="py-2 pr-3">Course Name</th>
+              <th class="py-2 pr-3">Status</th>
+              <th class="py-2 pr-3">Delivery</th>
+              <th class="py-2">Enrolled</th>
+            </tr>
+          </thead>
+          <tbody id="enrolRows">
+            <tr><td colspan="6" class="py-6 text-center text-zinc-500">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
     `;
 
     // Wire the Edit/Commit button
@@ -162,4 +185,98 @@ export async function renderStudentDetail(id){
   };
 
   render();
+  (async function loadEnrolments(){
+    const tbody = document.getElementById('enrolRows');
+    if (!tbody) return;
+
+    // Try a single query with a relationship (requires FK enrolments.course_id -> course.course_id)
+    let { data, error } = await supabase
+      .from('enrolments')
+      .select(`
+        id,
+        course_id,
+        status,
+        delivery_mode,
+        enrolled_at,
+        course:course_id ( course_name )
+      `)
+      .eq('student_id', id)
+      .order('enrolled_at', { ascending: false });
+
+    // Fallback if the relationship isn't set up
+    if (error) {
+      // basic fetch
+      const res = await supabase
+        .from('enrolments')
+        .select('id, course_id, status, delivery_mode, enrolled_at')
+        .eq('student_id', id)
+        .order('enrolled_at', { ascending: false });
+
+      if (res.error) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-red-600">${escapeHtml(res.error.message)}</td></tr>`;
+        return;
+      }
+
+      const enrols = res.data || [];
+
+      // build course name map
+      const courseIds = [...new Set(enrols.map(e => e.course_id).filter(Boolean))];
+      let courseMap = new Map();
+      if (courseIds.length) {
+        const { data: courseRows } = await supabase
+          .from('course')
+          .select('course_id, course_name')
+          .in('course_id', courseIds);
+        (courseRows || []).forEach(c => courseMap.set(c.course_id, c.course_name));
+      }
+
+      tbody.innerHTML = enrols.length
+        ? enrols.map(rowHtml).join('')
+        : `<tr><td colspan="6" class="py-6 text-center text-zinc-500">No enrolments yet.</td></tr>`;
+
+      // attach click nav
+      enrols.forEach(e => {
+        const tr = document.querySelector(`tr[data-enrol="${CSS.escape(e.id)}"]`);
+        if (tr) tr.addEventListener('click', ()=> location.hash = `#/enrolment/${encodeURIComponent(e.id)}`);
+      });
+
+      function rowHtml(r){
+        const name = courseMap.get(r.course_id) || '-';
+        return `
+          <tr class="border-t border-zinc-200/70 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+              data-enrol="${escapeHtml(r.id)}">
+            <td class="py-2 pr-3 font-medium">${escapeHtml(r.id)}</td>
+            <td class="py-2 pr-3">${escapeHtml(r.course_id || '-')}</td>
+            <td class="py-2 pr-3">${escapeHtml(name)}</td>
+            <td class="py-2 pr-3">${escapeHtml(r.status || '-')}</td>
+            <td class="py-2 pr-3">${escapeHtml(r.delivery_mode || '-')}</td>
+            <td class="py-2">${r.enrolled_at ? new Date(r.enrolled_at).toLocaleDateString() : '-'}</td>
+          </tr>`;
+      }
+
+      return;
+    }
+
+    // If single-query with relationship worked:
+    const enrols = data || [];
+    tbody.innerHTML = enrols.length
+      ? enrols.map(r => `
+        <tr class="border-t border-zinc-200/70 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer"
+            data-enrol="${escapeHtml(r.id)}">
+          <td class="py-2 pr-3 font-medium">${escapeHtml(r.id)}</td>
+          <td class="py-2 pr-3">${escapeHtml(r.course_id || '-')}</td>
+          <td class="py-2 pr-3">${escapeHtml(r.course?.course_name || '-')}</td>
+          <td class="py-2 pr-3">${escapeHtml(r.status || '-')}</td>
+          <td class="py-2 pr-3">${escapeHtml(r.delivery_mode || '-')}</td>
+          <td class="py-2">${r.enrolled_at ? new Date(r.enrolled_at).toLocaleDateString() : '-'}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="6" class="py-6 text-center text-zinc-500">No enrolments yet.</td></tr>`;
+
+    // row click → open editor
+    enrols.forEach(e => {
+      const tr = document.querySelector(`tr[data-enrol="${CSS.escape(e.id)}"]`);
+      if (tr) tr.addEventListener('click', ()=> location.hash = `#/enrolment/${encodeURIComponent(e.id)}`);
+    });
+  })();
 }

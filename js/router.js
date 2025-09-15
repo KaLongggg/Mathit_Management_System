@@ -2,19 +2,25 @@ import { supabase } from './supabaseClient.js';
 import { el } from './ui.js';
 import { renderLogin } from './views/login.js';
 import { renderDashboard } from './views/dashboard.js';
-import { renderCourses } from './views/courses.js';
+import { renderCourses, renderCourseEditor } from './views/courses.js'; // ⬅️ import editor
 import { renderStudents } from './views/students.js';
 import { renderStudentDetail } from './views/studentDetail.js';
+import { renderEnrolments, renderEnrolmentEditor } from './views/enrolments.js';
 
-// Define routes (including a dynamic one)
+
+
+
+// Routes (add /course/:id; "new" is a valid :id too)
 const routes = [
-  { path: '/dashboard', render: renderDashboard },
-  { path: '/courses',   render: renderCourses },
-  { path: '/students',  render: renderStudents },
-  { path: '/login',     render: renderLogin },
-  { path: '/student/:id', render: ({id}) => renderStudentDetail(id) },
+  { path: '/dashboard',   render: renderDashboard },
+  { path: '/courses',     render: renderCourses },
+  { path: '/course/:id',  render: ({ id }) => renderCourseEditor(id) },
+  { path: '/enrolments',  render: renderEnrolments },               // ← NEW
+  { path: '/enrolment/:id', render: ({ id }) => renderEnrolmentEditor(id) }, // ← NEW
+  { path: '/students',    render: renderStudents },
+  { path: '/student/:id', render: ({ id }) => renderStudentDetail(id) },
+  { path: '/login',       render: renderLogin },
 ];
-
 // Simple matcher that extracts params
 function matchRoute(path){
   for (const r of routes){
@@ -36,13 +42,15 @@ function matchRoute(path){
 
 function setActiveNav() {
   const path = (location.hash || '#/dashboard').replace(/^#/, '');
-  // Mark "Students" active for both /students and /student/:id
   document.querySelectorAll('[data-nav]').forEach(a => {
     const href = a.getAttribute('href');
-    const active =
-      (href === `#${path}`) ||
-      (href === '#/students' && path.startsWith('/student/'));
-    a.dataset.active = active ? 'true' : 'false';
+    const isStudents = href === '#/students' && (path === '/students' || path.startsWith('/student/'));
+    const isCourses  = href === '#/courses'  && (path === '/courses'  || path.startsWith('/course/')); // ⬅️ keep active
+    const isEnrols = href === '#/enrolments' && (path === '/enrolments' || path.startsWith('/enrolment/'));
+    const isExact    = href === `#${path}`;
+
+
+    a.dataset.active = (isStudents || isCourses || isExact) ? 'true' : 'false';
   });
   if (!el.mobileNav.classList.contains('hidden')) {
     el.mobileNav.classList.add('hidden');
