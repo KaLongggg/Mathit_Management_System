@@ -1,0 +1,26 @@
+import os
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+load_dotenv()
+
+url: str = os.getenv("SUPABASE_URL")
+key: str = os.getenv("SUPABASE_ANON_KEY")
+
+supabase: Client = create_client(url, key)
+
+# Example: fetch active schedules
+schedules = supabase.table("whatsapp_schedules").select("*").eq("active", True).execute()
+print(schedules.data)
+
+sid = schedules.data[0]["id"]  # <-- this is a real UUID string from the table
+
+# 3) Insert a test log row referencing that schedule_id
+log = {
+    "schedule_id": sid,
+    "student_name": "Oscar",
+    "whatsapp_number": "61400111222",
+    "message": "Test via supabase-py"
+}
+ins = supabase.table("whatsapp_schedule_logs").insert(log).execute()
+print(ins.data)
