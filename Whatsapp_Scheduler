@@ -1,26 +1,59 @@
+import requests
+
 import os
-from supabase import create_client, Client
+
+import psycopg2
 from dotenv import load_dotenv
 
+# Load environment variables from .env
 load_dotenv()
 
-url: str = os.getenv("SUPABASE_URL")
-key: str = os.getenv("SUPABASE_ANON_KEY")
+# Fetch variables
+USER = os.getenv("user")
+PASSWORD = os.getenv("password")
+HOST = os.getenv("host")
+PORT = os.getenv("port")
+DBNAME = os.getenv("dbname")
 
-supabase: Client = create_client(url, key)
+# Connect to the database
+try:
+    connection = psycopg2.connect(
+        user=USER, password=PASSWORD, host=HOST, port=PORT, dbname=DBNAME
+    )
+    print("Connection successful!")
 
-# Example: fetch active schedules
-schedules = supabase.table("whatsapp_schedules").select("*").eq("active", True).execute()
-print(schedules.data)
+    # Create a cursor to execute SQL queries
+    cursor = connection.cursor()
+    # Run query
+    cursor.execute("SELECT * FROM whatsapp_schedules;")
 
-sid = schedules.data[0]["id"]  # <-- this is a real UUID string from the table
+    # Fetch all results
+    rows = cursor.fetchall()
 
-# 3) Insert a test log row referencing that schedule_id
-log = {
-    "schedule_id": sid,
-    "student_name": "Oscar",
-    "whatsapp_number": "61400111222",
-    "message": "Test via supabase-py"
-}
-ins = supabase.table("whatsapp_schedule_logs").insert(log).execute()
-print(ins.data)
+    # Print column names
+    colnames = [desc[0] for desc in cursor.description]
+    print("Columns:", colnames)
+
+    # Print rows
+    for row in rows:
+        print(row)
+
+    # Close the cursor and connection
+    cursor.close()
+    connection.close()
+    print("Connection closed.")
+
+except Exception as e:
+    print(f"Failed to connect: {e}")
+
+
+# resp = requests.post(
+#     "http://localhost:3000/send",
+#     json={
+#         "phone": "54483039",
+#         "message": "DLLM呀，這是測試訊息 🚀",
+#         # "image_path": "assets\\favicon.png",
+#         "pdf_path": "assets\\DiDi.pdf",
+#     },
+# )
+# print(resp.json())
