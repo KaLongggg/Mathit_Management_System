@@ -78,6 +78,16 @@ export async function renderStudentDetail(id){
                 : `<div class="h-11 flex items-center">${escapeHtml(s.phone_number ?? '-')}</div>`
             }
           </label>
+          
+          <!-- Shipping Address -->
+          <label class="block sm:col-span-2">
+            <span class="block font-medium mb-1">Shipping Address</span>
+            ${
+              editMode
+                ? `<textarea id="postal_address" class="input" rows="3" placeholder="SF Address">${escapeHtml(s.postal_address ?? '')}</textarea>`
+                : `<div class="min-h-11 whitespace-pre-wrap">${escapeHtml(s.postal_address ?? '-')}</div>`
+            }
+          </label>
 
           <!-- Status -->
           <label class="block">
@@ -146,6 +156,7 @@ export async function renderStudentDetail(id){
         first_name:   document.getElementById('first_name')?.value ?? s.first_name ?? null,
         last_name:    document.getElementById('last_name')?.value ?? s.last_name ?? null,
         email: (document.getElementById('student_email')?.value || '').trim() || s.email || null,
+        postal_address: document.getElementById('postal_address')?.value ?? s.postal_address ?? null,
         phone_number: document.getElementById('phone_number')?.value ?? s.phone_number ?? null,
         is_active:    (document.getElementById('is_active')?.value ?? (s.is_active ? 'true' : 'false')) === 'true'
       };
