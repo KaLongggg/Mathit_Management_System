@@ -19,7 +19,9 @@
   "homepage": "https://github.com/KaLongggg/Mathit_Management_System#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
+    "body-parser": "^2.2.0",
     "dotenv": "^17.2.2",
+    "express": "^5.1.0",
     "mustache": "^4.2.0",
     "node-cron": "^4.2.1",
     "puppeteer": "^24.21.0",
