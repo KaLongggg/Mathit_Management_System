@@ -2,25 +2,28 @@ import { supabase } from './supabaseClient.js';
 import { el } from './ui.js';
 import { renderLogin } from './views/login.js';
 import { renderDashboard } from './views/dashboard.js';
-import { renderCourses, renderCourseEditor } from './views/courses.js'; // ⬅️ import editor
+import { renderCourses, renderCourseEditor } from './views/courses.js';
 import { renderStudents } from './views/students.js';
 import { renderStudentDetail } from './views/studentDetail.js';
 import { renderEnrolments, renderEnrolmentEditor } from './views/enrolments.js';
-
-
-
+import { renderWhatsAppSchedules } from './views/scheduler.js';
+import { renderWhatsAppSchedulerDetail } from './views/schedulerDetail.js';
 
 // Routes (add /course/:id; "new" is a valid :id too)
 const routes = [
-  { path: '/dashboard',   render: renderDashboard },
-  { path: '/courses',     render: renderCourses },
-  { path: '/course/:id',  render: ({ id }) => renderCourseEditor(id) },
-  { path: '/enrolments',  render: renderEnrolments },               // ← NEW
-  { path: '/enrolment/:id', render: ({ id }) => renderEnrolmentEditor(id) }, // ← NEW
-  { path: '/students',    render: renderStudents },
-  { path: '/student/:id', render: ({ id }) => renderStudentDetail(id) },
-  { path: '/login',       render: renderLogin },
+  { path: '/dashboard',       render: renderDashboard },
+  { path: '/courses',         render: renderCourses },
+  { path: '/course/:id',      render: ({ id }) => renderCourseEditor(id) },
+  { path: '/enrolments',      render: renderEnrolments },
+  { path: '/enrolment/:id',   render: ({ id }) => renderEnrolmentEditor(id) },
+  { path: '/students',        render: renderStudents },
+  { path: '/student/:id',     render: ({ id }) => renderStudentDetail(id) },
+  { path: '/scheduler',    render: renderWhatsAppSchedules },
+  { path: '/scheduler/:id',render: ({ id }) => renderWhatsAppSchedulerDetail(id) },
+
+  { path: '/login',           render: renderLogin },
 ];
+
 // Simple matcher that extracts params
 function matchRoute(path){
   for (const r of routes){
@@ -44,13 +47,14 @@ function setActiveNav() {
   const path = (location.hash || '#/dashboard').replace(/^#/, '');
   document.querySelectorAll('[data-nav]').forEach(a => {
     const href = a.getAttribute('href');
-    const isStudents = href === '#/students' && (path === '/students' || path.startsWith('/student/'));
-    const isCourses  = href === '#/courses'  && (path === '/courses'  || path.startsWith('/course/')); // ⬅️ keep active
-    const isEnrols = href === '#/enrolments' && (path === '/enrolments' || path.startsWith('/enrolment/'));
-    const isExact    = href === `#${path}`;
+    const isStudents  = href === '#/students'      && (path === '/students'      || path.startsWith('/student/'));
+    const isCourses   = href === '#/courses'       && (path === '/courses'       || path.startsWith('/course/'));
+    const isEnrols    = href === '#/enrolments'    && (path === '/enrolments'    || path.startsWith('/enrolment/'));
+    // ⬇️ NEW: keep Scheduler tab active when inside detail
+    const isScheduler = href === '#/scheduler'  && (path === '/scheduler'  || path.startsWith('/scheduler/'));
+    const isExact     = href === `#${path}`;
 
-
-    a.dataset.active = (isStudents || isCourses || isExact) ? 'true' : 'false';
+    a.dataset.active = (isStudents || isCourses || isEnrols || isScheduler || isExact) ? 'true' : 'false';
   });
   if (!el.mobileNav.classList.contains('hidden')) {
     el.mobileNav.classList.add('hidden');

@@ -1,4 +1,4 @@
-import os, time, hashlib, requests, psycopg2, json
+import os, time, hashlib, requests, psycopg2, json, re
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -37,6 +37,9 @@ def fetch_active_rules():
         cols = [d[0] for d in cur.description]
         return [dict(zip(cols, r)) for r in cur.fetchall()]
 
+def normalize_phone(p):
+    return re.sub(r"\s+", "", str(p))
+
 def query_to_dicts(sql_text):
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(sql_text)
@@ -72,16 +75,31 @@ def run_rule(r: dict):
     sent = skipped = 0
 
     for row in rows:
-        phone = row.get("phone_number") or row.get("whatsapp") or row.get("phone")
+        raw_phone = row.get("phone_number") or row.get("whatsapp") or row.get("phone")
+        if not raw_phone:
+            skipped += 1
+            continue
+
+        phone = normalize_phone(raw_phone)
         if not phone:
             skipped += 1
             continue
 
         message = renderer.render(r.get("message_template") or "", row)
-        payload = {"phone": str(phone), "message": message}
 
-        student_id = row.get("student_id") 
-        
+        # --- Build payload ---
+        payload = {
+            "phone": str(phone),
+            "message": message
+        }
+        if r.get("image_path"):
+            payload["image_path"] = r["image_path"]
+        if r.get("pdf_path"):
+            payload["pdf_path"] = r["pdf_path"]
+        # ----------------------
+
+        student_id = row.get("student_id") or ""  # text
+
         try:
             if DRY_RUN:
                 print(f"[DRY] {payload}")
@@ -154,7 +172,7 @@ if __name__ == "__main__":
 #     json={
 #         "phone": "54483039",
 #         "message": "DLLM呀，這是測試訊息 🚀",
-#         # "image_path": "assets\\favicon.png",
+#         "image_path": "assets\\favicon.png",
 #         "pdf_path": "assets\\DiDi.pdf",
 #     },
 # )
