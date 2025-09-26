@@ -7,7 +7,7 @@ export const el = {
   mobileNav: document.getElementById('mobileNav'),
 };
 
-export const fmtMoney = (n)=> n==null?'-':new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(n);
+export const fmtMoney = (n)=> n==null?'-':new Intl.NumberFormat('en-AU',{style:'currency',currency:'HKD'}).format(n);
 export const escapeHtml = (s)=> s==null? '' : String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 export const cssId = (s)=> String(s).replace(/[^a-zA-Z0-9_-]/g, '_');
 

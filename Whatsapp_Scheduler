@@ -3,27 +3,36 @@ from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import pytz, pystache
+import random
 
 # ---- Load env ----
 load_dotenv()
-USER     = os.getenv("user")
+USER = os.getenv("user")
 PASSWORD = os.getenv("password")
-HOST     = os.getenv("host")
-PORT     = os.getenv("port")
-DBNAME   = os.getenv("dbname")
+HOST = os.getenv("host")
+PORT = os.getenv("port")
+DBNAME = os.getenv("dbname")
 
-WA_API_URL = os.getenv("WA_API_URL", "http://localhost:3000/send")
-DRY_RUN    = os.getenv("DRY_RUN", "true").lower() == "true"
+WA_API_URL = os.getenv("WA_API_URL", "http://localhost:6543/send")
+DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
+
 
 # ---- DB connection ----
 def get_conn():
     return psycopg2.connect(
-        user=USER, password=PASSWORD, host=HOST, port=PORT, dbname=DBNAME, sslmode="require"
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME,
+        sslmode="require",
     )
+
 
 renderer = pystache.Renderer()
 scheduler = BackgroundScheduler(timezone="Asia/Hong_Kong")
 jobs_index = {}
+
 
 def fetch_active_rules():
     sql = """
@@ -37,8 +46,10 @@ def fetch_active_rules():
         cols = [d[0] for d in cur.description]
         return [dict(zip(cols, r)) for r in cur.fetchall()]
 
+
 def normalize_phone(p):
     return re.sub(r"\s+", "", str(p))
+
 
 def query_to_dicts(sql_text):
     with get_conn() as conn, conn.cursor() as cur:
@@ -46,15 +57,26 @@ def query_to_dicts(sql_text):
         cols = [d[0] for d in cur.description]
         return [dict(zip(cols, r)) for r in cur.fetchall()]
 
+
 def rule_signature(r: dict) -> str:
     h = hashlib.sha256()
-    for k in ("cron_expr","timezone","sql_query","message_template","image_path","pdf_path"):
+    for k in (
+        "cron_expr",
+        "timezone",
+        "sql_query",
+        "message_template",
+        "image_path",
+        "pdf_path",
+    ):
         v = (r.get(k) or "").encode("utf-8")
         h.update(v)
         h.update(b"|")
     return h.hexdigest()
 
-def log_send(schedule_id, student_id, whatsapp_number, message, status, error=None, payload=None):
+
+def log_send(
+    schedule_id, student_id, whatsapp_number, message, status, error=None, payload=None
+):
     """Insert a log row into whatsapp_schedule_logs."""
     try:
         with get_conn() as conn, conn.cursor() as cur:
@@ -64,10 +86,19 @@ def log_send(schedule_id, student_id, whatsapp_number, message, status, error=No
                   (schedule_id, student_id, whatsapp_number, message, status, error, payload)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                (schedule_id, student_id, whatsapp_number, message, status, error, json.dumps(payload) if payload else None)
+                (
+                    schedule_id,
+                    student_id,
+                    whatsapp_number,
+                    message,
+                    status,
+                    error,
+                    json.dumps(payload) if payload else None,
+                ),
             )
     except Exception as e:
         print(f"⚠️ Failed to log send: {e}")
+
 
 def run_rule(r: dict):
     print(f"⏱️ Running rule: {r['name']} ({r['id']})")
@@ -88,14 +119,11 @@ def run_rule(r: dict):
         message = renderer.render(r.get("message_template") or "", row)
 
         # --- Build payload ---
-        payload = {
-            "phone": str(phone),
-            "message": message
-        }
+        payload = {"phone": str(phone), "message": message}
         if r.get("image_path"):
-            payload["image_path"] = r["image_path"]
+            payload["image_path"] = f"assets/{r['image_path']}"
         if r.get("pdf_path"):
-            payload["pdf_path"] = r["pdf_path"]
+            payload["pdf_path"] = f"assets/{r['pdf_path']}"
         # ----------------------
 
         student_id = row.get("student_id") or ""  # text
@@ -111,14 +139,26 @@ def run_rule(r: dict):
                 status, err = "sent", None
 
             sent += 1
-            log_send(r["id"], student_id, phone, message, status, error=err, payload=payload)
+            log_send(
+                r["id"], student_id, phone, message, status, error=err, payload=payload
+            )
 
         except Exception as e:
             print(f"❌ send failed to {phone}: {e}")
-            log_send(r["id"], student_id, phone, message, "failed", error=str(e), payload=payload)
+            log_send(
+                r["id"],
+                student_id,
+                phone,
+                message,
+                "failed",
+                error=str(e),
+                payload=payload,
+            )
 
-        # pacing delay
-        time.sleep(2)
+        # pacing delay: random between 2 and 5 seconds
+        delay = random.uniform(2, 5)  # e.g. 2.37s, 4.81s
+        print(f"⏳ delaying {delay:.2f} seconds before next send...")
+        time.sleep(delay)
 
     print(f"🎯 Done. Sent={sent}, Skipped(no phone)={skipped}, TotalRows={len(rows)}")
 
@@ -154,9 +194,12 @@ def resync():
             jobs_index.pop(rid, None)
             print(f"🗑️ Unscheduled rule {rid}")
 
+
 if __name__ == "__main__":
     resync()
-    scheduler.add_job(resync, "interval", seconds=60, id="resync", replace_existing=True)
+    scheduler.add_job(
+        resync, "interval", seconds=60, id="resync", replace_existing=True
+    )
     scheduler.start()
     print("✅ Scheduler running (DRY_RUN =", DRY_RUN, "). Ctrl+C to stop.")
     try:
@@ -164,16 +207,3 @@ if __name__ == "__main__":
             time.sleep(3600)
     except KeyboardInterrupt:
         scheduler.shutdown()
-
-
-
-# resp = requests.post(
-#     "http://localhost:3000/send",
-#     json={
-#         "phone": "54483039",
-#         "message": "DLLM呀，這是測試訊息 🚀",
-#         "image_path": "assets\\favicon.png",
-#         "pdf_path": "assets\\DiDi.pdf",
-#     },
-# )
-# print(resp.json())

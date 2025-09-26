@@ -146,11 +146,11 @@ export async function renderWhatsAppSchedulerDetail(id){
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <div class="text-sm text-zinc-500">PDF Path</div>
+            <div class="text-sm text-zinc-500">PDF File Name</div>
             <div class="font-medium">${escapeHtml(r.pdf_path || '-')}</div>
           </div>
           <div>
-            <div class="text-sm text-zinc-500">Image Path</div>
+            <div class="text-sm text-zinc-500">Image File Name</div>
             <div class="font-medium">${escapeHtml(r.image_path || '-')}</div>
           </div>
         </div>
@@ -225,11 +225,11 @@ export async function renderWhatsAppSchedulerDetail(id){
 
       <div class="grid md:grid-cols-3 gap-4">
         <div>
-          <label class="text-sm text-zinc-500">PDF Path (optional)</label>
+          <label class="text-sm text-zinc-500">PDF File Name (optional)</label>
           <input id="f-pdf" class="input h-11 w-full" value="${escapeHtml(r.pdf_path || '')}">
         </div>
         <div>
-          <label class="text-sm text-zinc-500">Image Path (optional)</label>
+          <label class="text-sm text-zinc-500">Image File Name (optional)</label>
           <input id="f-img" class="input h-11 w-full" value="${escapeHtml(r.image_path || '')}">
         </div>
         <div class="flex items-center gap-2 mt-6">
