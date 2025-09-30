@@ -19,8 +19,20 @@ DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
 
 HEADERS = {"X-API-KEY": BOT_KEY} if BOT_KEY else {}
 
+
 # ---- DB connection ----
 def get_conn():
+    # optional one-liner to verify env values (remove later if noisy)
+    print(
+        "DB CONNECT:",
+        {
+            "user": USER,
+            "host": HOST,
+            "port": PORT,
+            "dbname": DBNAME,
+            "sslmode": "require",
+        },
+    )
     return psycopg2.connect(
         user=USER,
         password=PASSWORD,
@@ -28,6 +40,7 @@ def get_conn():
         port=PORT,
         dbname=DBNAME,
         sslmode="require",
+        connect_timeout=10,  # ✅ don't hang forever
     )
 
 
@@ -135,7 +148,9 @@ def run_rule(r: dict):
                 print(f"[DRY] {payload}")
                 status, err = "dry_run", None
             else:
-                resp = requests.post(WA_API_URL, json=payload, headers=HEADERS, timeout=20)
+                resp = requests.post(
+                    WA_API_URL, json=payload, headers=HEADERS, timeout=20
+                )
                 resp.raise_for_status()
                 print(f"✅ sent to {phone}")
                 status, err = "sent", None
@@ -198,12 +213,15 @@ def resync():
 
 
 if __name__ == "__main__":
+    print(
+        "🔄 Starting scheduler process… DRY_RUN =", DRY_RUN
+    )  # ✅ first log immediately
     resync()
     scheduler.add_job(
         resync, "interval", seconds=60, id="resync", replace_existing=True
     )
     scheduler.start()
-    print("✅ Scheduler running (DRY_RUN =", DRY_RUN, "). Ctrl+C to stop.")
+
     try:
         while True:
             time.sleep(3600)
