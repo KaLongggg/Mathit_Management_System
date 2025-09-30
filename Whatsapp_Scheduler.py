@@ -12,10 +12,12 @@ PASSWORD = os.getenv("password")
 HOST = os.getenv("host")
 PORT = os.getenv("port")
 DBNAME = os.getenv("dbname")
+BOT_KEY = os.getenv("BOT_SHARED_SECRET", "")
 
-WA_API_URL = os.getenv("WA_API_URL", "http://localhost:6543/send")
+WA_API_URL = os.getenv("WA_API_URL", "http://localhost:3000/send")
 DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
 
+HEADERS = {"X-API-KEY": BOT_KEY} if BOT_KEY else {}
 
 # ---- DB connection ----
 def get_conn():
@@ -133,7 +135,7 @@ def run_rule(r: dict):
                 print(f"[DRY] {payload}")
                 status, err = "dry_run", None
             else:
-                resp = requests.post(WA_API_URL, json=payload, timeout=20)
+                resp = requests.post(WA_API_URL, json=payload, headers=HEADERS, timeout=20)
                 resp.raise_for_status()
                 print(f"✅ sent to {phone}")
                 status, err = "sent", None
