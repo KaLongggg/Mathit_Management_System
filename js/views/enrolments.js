@@ -25,7 +25,6 @@ export function renderEnrolments(){
             <th class="py-2 pr-3">Course</th>
             <th class="py-2 pr-3">Status</th>
             <th class="py-2 pr-3">Delivery</th>
-            <th class="py-2 pr-3">Payment</th>
             <th class="py-2">Enrolled</th>
           </tr>
         </thead>
@@ -41,7 +40,7 @@ export function renderEnrolments(){
     // Adjust select columns to match your schema
     let q = supabase
       .from('enrolments')
-      .select('id, student_id, course_id, status, enrolled_at, delivery_mode, payment_method, notes')
+      .select('id, student_id, course_id, status, enrolled_at, delivery_mode, notes')
       .order('enrolled_at', { ascending:false })
       .limit(200);
 
@@ -51,7 +50,6 @@ export function renderEnrolments(){
         `id.ilike.%${safe}%`,
         `student_id.ilike.%${safe}%`,
         `course_id.ilike.%${safe}%`,
-        `payment_method.ilike.%${safe}%`,
         `delivery_mode.ilike.%${safe}%`,
       ].join(','));
     }
@@ -86,7 +84,6 @@ export function renderEnrolments(){
         <td class="py-2 pr-3">${escapeHtml(courseMap.get(r.course_id)?.name || r.course_id || '-')}</td>
         <td class="py-2 pr-3">${escapeHtml(r.status ?? '-')}</td>
         <td class="py-2 pr-3">${escapeHtml((r.delivery_mode||'').toString())}</td>
-        <td class="py-2 pr-3">${escapeHtml((r.payment_method||'').toString())}</td>
         <td class="py-2">${r.enrolled_at ? new Date(r.enrolled_at).toLocaleDateString() : '-'}</td>
       </tr>
     `).join('');
@@ -145,7 +142,6 @@ export async function renderEnrolmentEditor(enrolId){
     status: 'pending',
     enrolled_at: new Date().toISOString(),
     delivery_mode: 'Online',
-    payment_method: 'Thinkific',
     notes: ''
   };
 
@@ -203,18 +199,10 @@ export async function renderEnrolmentEditor(enrolId){
       <label class="block">
         <span class="block text-sm font-medium mb-1">Delivery Mode</span>
         <select id="delivery_mode" class="input">
-          ${opt('Online', rec.delivery_mode)}
+          ${opt('Video', rec.delivery_mode)}
           ${opt('Mong Kok', rec.delivery_mode)}
           ${opt('Tuen Mun', rec.delivery_mode)}
-        </select>
-      </label>
-
-      <label class="block">
-        <span class="block text-sm font-medium mb-1">Payment Method</span>
-        <select id="payment_method" class="input">
-          ${opt('Thinkific', rec.payment_method)}
-          ${opt('PayMe', rec.payment_method)}
-          ${opt('Bank Transfer', rec.payment_method)}
+          ${opt('Group', rec.delivery_mode)}
         </select>
       </label>
 
@@ -266,7 +254,6 @@ export async function renderEnrolmentEditor(enrolId){
       status:       val('status') || 'pending',
       enrolled_at:  val('enrolled_at') || null,
       delivery_mode: document.getElementById('delivery_mode').value,
-      payment_method: document.getElementById('payment_method').value,
       notes:        (document.getElementById('notes')?.value ?? null)
     };
 
