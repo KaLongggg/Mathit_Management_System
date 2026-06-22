@@ -1,0 +1,181 @@
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { supabase } from '../lib/supabase.js';
+import { useToast } from '../components/Toast.jsx';
+import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner } from '../components/ui.jsx';
+import { Icon } from '../components/icons.jsx';
+import { fmtDateShort, fullName, pct } from '../lib/format.js';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FIELDS = [
+  ['first_name', 'First name'],
+  ['last_name', 'Last name'],
+  ['email', 'Email'],
+  ['phone_number', 'WhatsApp / Phone'],
+  ['dse_year', 'DSE Year'],
+  ['dse_aim', 'DSE Aim'],
+  ['current_level', 'Current Level'],
+];
+
+export default function StudentDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+
+  const [student, setStudent] = useState(null);
+  const [error, setError] = useState('');
+  const [edit, setEdit] = useState(false);
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [enrols, setEnrols] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from('student').select('*').eq('student_id', id).single();
+      if (error) setError(error.message);
+      else setStudent(data);
+    })();
+    (async () => {
+      const { data, error } = await supabase
+        .from('enrolments')
+        .select('id, course_id, status, percentage_completed, enrolled_at, course:course_id ( course_name )')
+        .eq('student_id', id)
+        .order('enrolled_at', { ascending: false });
+      setEnrols(error ? [] : data || []);
+    })();
+  }, [id]);
+
+  function startEdit() {
+    setForm(Object.fromEntries(FIELDS.map(([k]) => [k, student[k] ?? ''])));
+    setEdit(true);
+  }
+
+  async function save() {
+    if (form.email && !EMAIL_RE.test(form.email.trim())) {
+      toast('Please enter a valid email address.', 'error');
+      return;
+    }
+    setSaving(true);
+    const payload = Object.fromEntries(FIELDS.map(([k]) => [k, form[k]?.trim?.() ? form[k].trim() : form[k] || null]));
+    const { data, error } = await supabase.from('student').update(payload).eq('student_id', id).select().single();
+    setSaving(false);
+    if (error) return toast(error.message, 'error');
+    setStudent(data);
+    setEdit(false);
+    toast('Saved.', 'success');
+  }
+
+  if (error) return (<><PageHeader title="Student" backTo="/students" /><ErrorBanner message={error} /></>);
+  if (!student) return (<><PageHeader title="Student" backTo="/students" /><SkeletonRows rows={4} /></>);
+
+  return (
+    <>
+      <PageHeader
+        title={fullName(student) || 'Student'}
+        backTo="/students"
+        backLabel="Back to students"
+        actions={
+          edit ? (
+            <>
+              <button className="btn btn-ghost" onClick={() => setEdit(false)} disabled={saving}>Cancel</button>
+              <button className="btn btn-primary" onClick={save} disabled={saving}>
+                {saving ? <Spinner /> : 'Save changes'}
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-ghost" onClick={startEdit}>
+              <Icon name="edit" size={16} /> Edit
+            </button>
+          )
+        }
+      />
+
+      <div className="card p-5 sm:p-6">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Student ID"><span className="font-mono text-[13px]">{student.student_id}</span></Field>
+          {FIELDS.map(([k, label]) => (
+            <div key={k}>
+              {edit ? (
+                <>
+                  <label className="label" htmlFor={k}>{label}</label>
+                  <input
+                    id={k}
+                    className="input"
+                    type={k === 'email' ? 'email' : 'text'}
+                    value={form[k] ?? ''}
+                    onChange={(e) => setForm((x) => ({ ...x, [k]: e.target.value }))}
+                  />
+                </>
+              ) : (
+                <Field label={label}>{student[k]}</Field>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Enrolments */}
+      <div className="mt-4 card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h2 className="text-lg font-semibold">Enrolments</h2>
+          {enrols && <span className="text-sm text-slate-400">{enrols.length} total</span>}
+        </div>
+
+        {enrols === null ? (
+          <div className="p-5"><SkeletonRows rows={3} /></div>
+        ) : enrols.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-slate-500">No enrolments yet.</p>
+        ) : (
+          <>
+            <table className="hidden w-full md:table">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <th className="px-5 py-3 font-medium">Course</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">Completion</th>
+                  <th className="px-5 py-3 font-medium">Enrolled</th>
+                </tr>
+              </thead>
+              <tbody>
+                {enrols.map((e) => (
+                  <tr
+                    key={e.id}
+                    onClick={() => navigate(`/enrolment/${encodeURIComponent(e.id)}`)}
+                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-brand-50/60"
+                  >
+                    <td className="px-5 py-3">
+                      <div className="font-medium text-slate-800">{e.course?.course_name || e.course_id}</div>
+                      <div className="font-mono text-xs text-slate-400">{e.course_id}</div>
+                    </td>
+                    <td className="px-5 py-3"><StatusPill status={e.status} /></td>
+                    <td className="px-5 py-3 tabular-nums text-slate-600">{pct(e.percentage_completed)}</td>
+                    <td className="px-5 py-3 text-slate-500">{fmtDateShort(e.enrolled_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <ul className="divide-y divide-slate-100 md:hidden">
+              {enrols.map((e) => (
+                <li key={e.id}>
+                  <button
+                    onClick={() => navigate(`/enrolment/${encodeURIComponent(e.id)}`)}
+                    className="block w-full px-4 py-3.5 text-left hover:bg-brand-50/60"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-medium text-slate-800">{e.course?.course_name || e.course_id}</span>
+                      <StatusPill status={e.status} />
+                    </div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      {pct(e.percentage_completed)} · {fmtDateShort(e.enrolled_at)}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
