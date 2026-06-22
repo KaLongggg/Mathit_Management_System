@@ -141,7 +141,7 @@ export default function StudentDetail() {
   }, [id, loadEnrols]);
 
   function startEdit() {
-    setForm(Object.fromEntries(FIELDS.map(([k]) => [k, student[k] ?? ''])));
+    setForm({ ...Object.fromEntries(FIELDS.map(([k]) => [k, student[k] ?? ''])), postal_address: student.postal_address ?? '' });
     setEdit(true);
   }
 
@@ -152,12 +152,17 @@ export default function StudentDetail() {
     }
     setSaving(true);
     try {
-      // Push the edit to Thinkific (and the local table) via the edge function.
+      // Thinkific-owned fields go through the edge function; postal_address is
+      // local-only, saved straight to Supabase.
       const fields = Object.fromEntries(FIELDS.map(([k]) => [k, (form[k] ?? '').toString().trim()]));
-      const { student: saved } = await updateStudent(id, fields);
-      setStudent(saved);
+      const postal = (form.postal_address ?? '').toString().trim() || null;
+      const [{ student: saved }] = await Promise.all([
+        updateStudent(id, fields),
+        supabase.from('student').update({ postal_address: postal }).eq('student_id', id),
+      ]);
+      setStudent({ ...saved, postal_address: postal });
       setEdit(false);
-      toast('Saved to Thinkific.', 'success');
+      toast('Saved.', 'success');
     } catch (ex) {
       toast(ex.message, 'error');
     } finally {
@@ -232,6 +237,18 @@ export default function StudentDetail() {
               )}
             </div>
           ))}
+          <div className="sm:col-span-2">
+            {edit ? (
+              <>
+                <label className="label" htmlFor="postal_address">Shipping address (SF / 順豐)</label>
+                <textarea id="postal_address" className="input" rows={3} value={form.postal_address ?? ''} onChange={(e) => setForm((x) => ({ ...x, postal_address: e.target.value }))} />
+              </>
+            ) : (
+              <Field label="Shipping address" full>
+                {student.postal_address ? <span className="whitespace-pre-wrap">{student.postal_address}</span> : null}
+              </Field>
+            )}
+          </div>
         </div>
       </div>
 
