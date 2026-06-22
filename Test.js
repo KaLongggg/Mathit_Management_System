@@ -9,6 +9,25 @@ const bodyParser = require('body-parser');
 const qrcode = require('qrcode-terminal');
 const Mustache = require('mustache');
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const { createClient } = require('@supabase/supabase-js');
+
+// -------- heartbeat to Supabase (so the web app can see bot status) --------
+const supa = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
+
+let waState = 'starting';
+async function heartbeat(detail) {
+  if (!supa) return;
+  try {
+    await supa.from('bot_status').upsert(
+      { id: 'whatsapp_bot', state: waState, detail: detail ?? null, updated_at: new Date().toISOString() },
+      { onConflict: 'id' },
+    );
+  } catch (e) {
+    console.error('heartbeat failed:', e.message);
+  }
+}
 
 // -------- helpers --------
 function hkLocalToChatId(local8) {
@@ -70,11 +89,12 @@ const client = new Client({
 });
 
 
-// QR / lifecycle logs
-client.on('qr', qr => qrcode.generate(qr, { small: true }));
-client.on('authenticated', () => console.log('? Authenticated'));
-client.on('ready', async () => console.log('?? Bot ready!'));
-client.on('disconnected', reason => console.error('?? Disconnected:', reason));
+// QR / lifecycle logs + state tracking for heartbeat
+client.on('qr', qr => { waState = 'qr'; heartbeat('Waiting for QR scan'); qrcode.generate(qr, { small: true }); });
+client.on('authenticated', () => { waState = 'authenticated'; heartbeat('Authenticated'); console.log('Authenticated'); });
+client.on('ready', async () => { waState = 'ready'; heartbeat('Connected'); console.log('Bot ready!'); });
+client.on('auth_failure', msg => { waState = 'auth_failure'; heartbeat(String(msg)); console.error('Auth failure:', msg); });
+client.on('disconnected', reason => { waState = 'disconnected'; heartbeat(String(reason)); console.error('Disconnected:', reason); });
 
 // Simple echo handler example
 client.on('message', async (msg) => {
@@ -90,6 +110,11 @@ client.on('message', async (msg) => {
 
 client.initialize();
 
+// Send a heartbeat on startup and every 30s so the web app can detect a
+// silent disconnect (stale heartbeat) or a reported WhatsApp drop.
+heartbeat('Process started');
+setInterval(() => heartbeat(), 30_000);
+
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('\n?? Shutting down…');
@@ -104,14 +129,20 @@ app.use(bodyParser.json());
 // Optional: simple token gate
 const REQUIRED_TOKEN = process.env.BOT_SHARED_SECRET || '';
 app.use((req, res, next) => {
+  if (req.path === '/health') return next(); // health is open for monitoring
   if (!REQUIRED_TOKEN) return next();
   const token = req.header('X-API-KEY') || '';
   if (token === REQUIRED_TOKEN) return next();
   return res.status(401).json({ error: 'unauthorized' });
 });
 
-// Healthcheck
-app.get('/health', (_req, res) => res.json({ ok: true }));
+// Healthcheck — reports the real WhatsApp connection state, not just "express is up".
+// Returns 200 only when WhatsApp is connected, so a Docker HEALTHCHECK can catch
+// a silent disconnect.
+app.get('/health', (_req, res) => {
+  const ready = waState === 'ready';
+  res.status(ready ? 200 : 503).json({ ok: ready, state: waState });
+});
 
 // Send single
 app.post('/send', async (req, res) => {

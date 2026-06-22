@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase.js';
 import { gaReport } from '../lib/api.js';
 import { Icon } from '../components/icons.jsx';
 import { PageHeader, ErrorBanner } from '../components/ui.jsx';
+import { BotStatusTile } from '../components/BotStatus.jsx';
 import {
   COURSE_CLASSES, COURSE_CLASS_COLORS, ENROLMENT_STATUSES, ENROLMENT_STATUS_COLORS,
 } from '../lib/constants.js';
@@ -144,6 +145,7 @@ export default function Dashboard() {
         <StatCard icon="courses" label="Courses" value={s.courses} to="/courses" />
         <StatCard icon="enrolments" label="Enrolments" value={s.enrolments} to="/enrolments" />
         <StatCard icon="check" label="Active enrolments" value={s.act} to="/enrolments" />
+        <BotStatusTile />
       </div>
 
       {/* Enrolments by month, stacked by class */}

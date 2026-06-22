@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, EmptyState, ErrorBanner, SkeletonRows, ActivePill } from '../components/ui.jsx';
+import { BotStatusBanner } from '../components/BotStatus.jsx';
 import { Icon } from '../components/icons.jsx';
 import { fmtDate } from '../lib/format.js';
 
@@ -59,6 +60,8 @@ export default function Scheduler() {
           </>
         }
       />
+
+      <BotStatusBanner />
 
       <ErrorBanner message={error} />
 
