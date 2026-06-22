@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
-import { enrolStudent, updateStudent } from '../lib/api.js';
+import { deleteStudent, enrolStudent, updateStudent } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Modal } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
@@ -101,6 +101,7 @@ export default function StudentDetail() {
   const [saving, setSaving] = useState(false);
   const [enrols, setEnrols] = useState(null);
   const [showEnrol, setShowEnrol] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const loadEnrols = useCallback(async () => {
     const { data, error } = await supabase
@@ -145,6 +146,22 @@ export default function StudentDetail() {
     }
   }
 
+  async function remove() {
+    const ok = window.confirm(
+      `Delete ${fullName(student) || 'this student'} from Thinkific?\n\nThis permanently removes their account and enrolments and cannot be undone.`,
+    );
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deleteStudent(id);
+      toast('Student deleted.', 'success');
+      navigate('/students');
+    } catch (ex) {
+      toast(ex.message, 'error');
+      setDeleting(false);
+    }
+  }
+
   if (error) return (<><PageHeader title="Student" backTo="/students" /><ErrorBanner message={error} /></>);
   if (!student) return (<><PageHeader title="Student" backTo="/students" /><SkeletonRows rows={4} /></>);
 
@@ -163,9 +180,14 @@ export default function StudentDetail() {
               </button>
             </>
           ) : (
-            <button className="btn btn-ghost" onClick={startEdit}>
-              <Icon name="edit" size={16} /> Edit
-            </button>
+            <>
+              <button className="btn btn-ghost" onClick={startEdit}>
+                <Icon name="edit" size={16} /> Edit
+              </button>
+              <button className="btn btn-danger-ghost" onClick={remove} disabled={deleting}>
+                {deleting ? <Spinner /> : <><Icon name="trash" size={16} /> Delete</>}
+              </button>
+            </>
           )
         }
       />

@@ -170,6 +170,23 @@ Deno.serve(async (req) => {
       return json({ student: saved });
     }
 
+    if (payload?.action === "delete_student") {
+      const studentId = norm(payload.student_id);
+      if (!studentId) return json({ error: "student_id is required." }, 400);
+
+      const r = await thinkific(`/users/${studentId}`, "DELETE");
+      // 404 = already gone in Thinkific; still clean up locally.
+      if (!r.ok && r.status !== 404) {
+        return json({ error: "Thinkific could not delete the user.", status: r.status, detail: r.data }, 400);
+      }
+
+      // FK-safe: remove enrolments before the student row.
+      await db.from("enrolments").delete().eq("student_id", studentId);
+      const { error } = await db.from("student").delete().eq("student_id", studentId);
+      if (error) return json({ error: "Deleted in Thinkific but local cleanup failed: " + error.message }, 207);
+      return json({ ok: true });
+    }
+
     return json({ error: "Unknown action" }, 400);
   } catch (err) {
     return json({ error: String((err as Error)?.message ?? err) }, 500);
