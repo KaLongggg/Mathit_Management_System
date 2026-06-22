@@ -140,7 +140,7 @@ export default function Dashboard() {
     <>
       <PageHeader title="Dashboard" subtitle="A live snapshot of your academy." />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard icon="students" label="Students" value={s.students} sub={s.newStu != null ? `+${s.newStu} this week` : null} to="/students" />
         <StatCard icon="courses" label="Courses" value={s.courses} to="/courses" />
         <StatCard icon="enrolments" label="Enrolments" value={s.enrolments} to="/enrolments" />
