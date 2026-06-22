@@ -8,6 +8,7 @@ const NAV = [
   { to: '/students', label: 'Students', icon: 'students', match: ['/students', '/student'] },
   { to: '/enrolments', label: 'Enrolments', icon: 'enrolments', match: ['/enrolments', '/enrolment'] },
   { to: '/scheduler', label: 'Scheduler', icon: 'scheduler', match: ['/scheduler'] },
+  { to: '/logs', label: 'Logs', icon: 'logs', match: ['/logs'] },
 ];
 
 function isActive(pathname, item) {
@@ -89,7 +90,7 @@ export default function Layout() {
 
       {/* Mobile bottom tab bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur md:hidden"
         aria-label="Primary"
       >
         {NAV.map((item) => {

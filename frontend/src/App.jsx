@@ -12,6 +12,7 @@ import Enrolments from './pages/Enrolments.jsx';
 import EnrolmentDetail from './pages/EnrolmentDetail.jsx';
 import Scheduler from './pages/Scheduler.jsx';
 import SchedulerDetail from './pages/SchedulerDetail.jsx';
+import Logs from './pages/Logs.jsx';
 
 function Splash() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/enrolment/:id" element={<EnrolmentDetail />} />
           <Route path="/scheduler" element={<Scheduler />} />
           <Route path="/scheduler/:id" element={<SchedulerDetail />} />
+          <Route path="/logs" element={<Logs />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

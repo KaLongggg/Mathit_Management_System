@@ -104,6 +104,13 @@ const PATHS = {
       <path d="M17 8h4v4" />
     </>
   ),
+  logs: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
+    </>
+  ),
+  chevronDown: <path d="M6 9l6 6 6-6" />,
 };
 
 export function Icon({ name, size = 20, className = '', strokeWidth = 1.7 }) {
