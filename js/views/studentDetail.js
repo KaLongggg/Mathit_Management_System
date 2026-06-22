@@ -79,33 +79,34 @@ export async function renderStudentDetail(id){
             }
           </label>
           
-          <!-- Shipping Address -->
-          <label class="block sm:col-span-2">
-            <span class="block font-medium mb-1">Shipping Address</span>
+          <!-- DSE Year -->
+          <label class="block">
+            <span class="block font-medium mb-1">DSE Year</span>
             ${
               editMode
-                ? `<textarea id="postal_address" class="input" rows="3" placeholder="SF Address">${escapeHtml(s.postal_address ?? '')}</textarea>`
-                : `<div class="min-h-11 whitespace-pre-wrap">${escapeHtml(s.postal_address ?? '-')}</div>`
+                ? `<input id="dse_year" class="input h-11" value="${escapeHtml(s.dse_year ?? '')}" />`
+                : `<div class="h-11 flex items-center">${escapeHtml(s.dse_year ?? '-')}</div>`
             }
           </label>
 
-          <!-- Status -->
+          <!-- DSE Aim -->
           <label class="block">
-            <span class="block font-medium mb-1">Status</span>
+            <span class="block font-medium mb-1">DSE Aim</span>
             ${
               editMode
-                ? `<select id="is_active" class="input h-11">
-                     <option value="true"  ${s.is_active ? 'selected' : ''}>Active</option>
-                     <option value="false" ${!s.is_active ? 'selected' : ''}>Inactive</option>
-                   </select>`
-                : `<div class="h-11 flex items-center">${s.is_active ? 'Active' : 'Inactive'}</div>`
+                ? `<input id="dse_aim" class="input h-11" value="${escapeHtml(s.dse_aim ?? '')}" />`
+                : `<div class="h-11 flex items-center">${escapeHtml(s.dse_aim ?? '-')}</div>`
             }
           </label>
 
-          <!-- Last sign-in (read-only informational) -->
+          <!-- Current Level -->
           <label class="block">
-            <span class="block font-medium mb-1">Last sign-in</span>
-            <div class="h-11 flex items-center">${escapeHtml(s.last_sign_in ?? '-')}</div>
+            <span class="block font-medium mb-1">Current Level</span>
+            ${
+              editMode
+                ? `<input id="current_level" class="input h-11" value="${escapeHtml(s.current_level ?? '')}" />`
+                : `<div class="h-11 flex items-center">${escapeHtml(s.current_level ?? '-')}</div>`
+            }
           </label>
         </form>
 
@@ -124,7 +125,7 @@ export async function renderStudentDetail(id){
               <th class="py-2 pr-3">Course ID</th>
               <th class="py-2 pr-3">Course Name</th>
               <th class="py-2 pr-3">Status</th>
-              <th class="py-2 pr-3">Delivery</th>
+              <th class="py-2 pr-3">Completion</th>
               <th class="py-2">Enrolled</th>
             </tr>
           </thead>
@@ -156,9 +157,10 @@ export async function renderStudentDetail(id){
         first_name:   document.getElementById('first_name')?.value ?? s.first_name ?? null,
         last_name:    document.getElementById('last_name')?.value ?? s.last_name ?? null,
         email: (document.getElementById('student_email')?.value || '').trim() || s.email || null,
-        postal_address: document.getElementById('postal_address')?.value ?? s.postal_address ?? null,
         phone_number: document.getElementById('phone_number')?.value ?? s.phone_number ?? null,
-        is_active:    (document.getElementById('is_active')?.value ?? (s.is_active ? 'true' : 'false')) === 'true'
+        dse_year:     document.getElementById('dse_year')?.value ?? s.dse_year ?? null,
+        dse_aim:      document.getElementById('dse_aim')?.value ?? s.dse_aim ?? null,
+        current_level: document.getElementById('current_level')?.value ?? s.current_level ?? null
       };
 
       // Optional: tiny email sanity check
@@ -207,7 +209,7 @@ export async function renderStudentDetail(id){
         id,
         course_id,
         status,
-        delivery_mode,
+        percentage_completed,
         enrolled_at,
         course:course_id ( course_name )
       `)
@@ -219,7 +221,7 @@ export async function renderStudentDetail(id){
       // basic fetch
       const res = await supabase
         .from('enrolments')
-        .select('id, course_id, status, delivery_mode, enrolled_at')
+        .select('id, course_id, status, percentage_completed, enrolled_at')
         .eq('student_id', id)
         .order('enrolled_at', { ascending: false });
 
@@ -260,7 +262,7 @@ export async function renderStudentDetail(id){
             <td class="py-2 pr-3">${escapeHtml(r.course_id || '-')}</td>
             <td class="py-2 pr-3">${escapeHtml(name)}</td>
             <td class="py-2 pr-3">${escapeHtml(r.status || '-')}</td>
-            <td class="py-2 pr-3">${escapeHtml(r.delivery_mode || '-')}</td>
+            <td class="py-2 pr-3">${r.percentage_completed != null ? Math.round(r.percentage_completed*100)+'%' : '-'}</td>
             <td class="py-2">${r.enrolled_at ? new Date(r.enrolled_at).toLocaleDateString() : '-'}</td>
           </tr>`;
       }
@@ -278,7 +280,7 @@ export async function renderStudentDetail(id){
           <td class="py-2 pr-3">${escapeHtml(r.course_id || '-')}</td>
           <td class="py-2 pr-3">${escapeHtml(r.course?.course_name || '-')}</td>
           <td class="py-2 pr-3">${escapeHtml(r.status || '-')}</td>
-          <td class="py-2 pr-3">${escapeHtml(r.delivery_mode || '-')}</td>
+          <td class="py-2 pr-3">${r.percentage_completed != null ? Math.round(r.percentage_completed*100)+'%' : '-'}</td>
           <td class="py-2">${r.enrolled_at ? new Date(r.enrolled_at).toLocaleDateString() : '-'}</td>
         </tr>
       `).join('')

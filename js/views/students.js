@@ -39,7 +39,7 @@ export function renderStudents(){
     if (last)  ors.push(`last_name.ilike.%${last.replace(/[,()]/g,"\\$&")}%`);
     if (email) ors.push(`email.ilike.%${email.replace(/[,()]/g,"\\$&")}%`);
     if (phone) ors.push(`phone_number.ilike.%${phone.replace(/[,()]/g,"\\$&")}%`);
-    q = q.or(ors.join(',')).order('last_sign_in', { ascending:false });
+    q = q.or(ors.join(',')).order('created_at', { ascending:false });
 
     const { data, error } = await q;
     if (error) { resEl.innerHTML = `<div class="text-red-600">${escapeHtml(error.message)}</div>`; return; }
@@ -67,7 +67,7 @@ function studentCard(s){
         <div class="text-lg font-semibold">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</div>
         <div class="text-sm text-zinc-600 dark:text-zinc-400">${escapeHtml(s.email ?? '')}</div>
       </div>
-      <div>${s.is_active?'<span class="pill pill-green">Active</span>':'<span class="pill pill-red">Inactive</span>'}</div>
+      <div>${s.dse_year?`<span class="pill pill-green">DSE ${escapeHtml(s.dse_year)}</span>`:''}</div>
     </div>
     <div class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
       <span class="mr-4">ID: ${escapeHtml(s.student_id)}</span>

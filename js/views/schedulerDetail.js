@@ -13,8 +13,8 @@ function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch{ return d 
 
 // --- Template placeholders (student columns) ---
 const STUDENT_TEMPLATE_FIELDS = [
-  'student_id','phone_number','email','dse_year','is_active','dse_aim',
-  'current_level','first_name','last_name','last_sign_in','date_created','postal_address'
+  'student_id','phone_number','email','dse_year','dse_aim','current_level',
+  'first_name','last_name','full_name','created_at','roles'
 ];
 function placeholderPill(text){
   return `<span class="inline-flex items-center rounded-full border border-zinc-300 dark:border-zinc-700 px-2 py-1 text-xs">${escapeHtml(text)}</span>`;

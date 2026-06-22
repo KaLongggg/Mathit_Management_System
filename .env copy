@@ -1,0 +1,32 @@
+# ============================================================
+#  Thinkific Admin API
+#  Docs: https://developers.thinkific.com/api/api-documentation
+#  Auth: OAuth/Bearer token (sent as "Authorization: Bearer <key>")
+#  Base URL: https://api.thinkific.com/api/public/v1
+# ============================================================
+
+# Your Thinkific API key (Settings > Code & API > API in your Thinkific admin)
+THINKIFIC_API_KEY=
+
+# Your Thinkific subdomain — the "xxxx" in https://xxxx.thinkific.com
+THINKIFIC_SUBDOMAIN=
+
+# Base address of the Admin API (leave as-is unless Thinkific changes it)
+THINKIFIC_BASE_URL=https://api.thinkific.com/api/public/v1
+
+
+# ============================================================
+#  Existing config (mirrored from .env — fill in if this file
+#  is used as the active env for the backend)
+# ============================================================
+WA_API_URL=http://localhost:3000/send
+POLL_SECONDS=30
+SUPABASE_URL=https://pezkjbjtvcapsubwlwgt.supabase.co
+SUPABASE_ANON_KEY=
+user=
+password=
+host=aws-1-ap-southeast-2.pooler.supabase.com
+port=6543
+dbname=postgres
+DRY_RUN=true
+MAX_TEST_SEND=3
