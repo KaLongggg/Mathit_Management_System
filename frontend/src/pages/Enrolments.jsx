@@ -8,6 +8,12 @@ import { fmtDateShort, pct } from '../lib/format.js';
 
 const EMPTY = { term: '', dse: '', from: '', to: '' };
 
+function PaidBadge({ value }) {
+  if (value === true) return <span className="pill pill-green">Paid</span>;
+  if (value === false) return <span className="pill pill-coral">Unpaid</span>;
+  return <span className="text-slate-300">—</span>;
+}
+
 export default function Enrolments() {
   const [draft, setDraft] = useState(EMPTY);
   const [committed, setCommitted] = useState(EMPTY);
@@ -23,7 +29,7 @@ export default function Enrolments() {
     const { term, dse, from, to } = committed;
     let q = supabase
       .from('enrolments')
-      .select('id, student_id, course_id, course_name, user_name, status, percentage_completed, enrolled_at, student:student_id!inner(dse_year)')
+      .select('id, student_id, course_id, course_name, user_name, status, is_paid, percentage_completed, enrolled_at, student:student_id!inner(dse_year)')
       .order(sort.key, { ascending: sort.dir === 'asc' })
       .limit(200);
     if (term.trim()) {
@@ -84,6 +90,7 @@ export default function Enrolments() {
                   <SortHeader label="Student" sortKey="user_name" sort={sort} onToggle={toggleSort} />
                   <SortHeader label="Course" sortKey="course_name" sort={sort} onToggle={toggleSort} />
                   <SortHeader label="Status" sortKey="status" sort={sort} onToggle={toggleSort} />
+                  <SortHeader label="Paid" sortKey="is_paid" sort={sort} onToggle={toggleSort} />
                   <SortHeader label="Completion" sortKey="percentage_completed" sort={sort} onToggle={toggleSort} />
                   <SortHeader label="Enrolled" sortKey="enrolled_at" sort={sort} onToggle={toggleSort} />
                 </tr>
@@ -98,6 +105,7 @@ export default function Enrolments() {
                     <td className="px-5 py-3 font-medium text-slate-800">{r.user_name || r.student_id}</td>
                     <td className="px-5 py-3 text-slate-600">{r.course_name || r.course_id}</td>
                     <td className="px-5 py-3"><StatusPill status={r.status} /></td>
+                    <td className="px-5 py-3"><PaidBadge value={r.is_paid} /></td>
                     <td className="px-5 py-3 tabular-nums text-slate-600">{pct(r.percentage_completed)}</td>
                     <td className="px-5 py-3 text-slate-500">{fmtDateShort(r.enrolled_at)}</td>
                   </tr>
@@ -111,7 +119,10 @@ export default function Enrolments() {
                   <button onClick={() => navigate(`/enrolment/${encodeURIComponent(r.id)}`)} className="block w-full px-4 py-3.5 text-left hover:bg-brand-50/60">
                     <div className="flex items-center justify-between gap-2">
                       <span className="min-w-0 truncate font-medium text-slate-800">{r.user_name || r.student_id}</span>
-                      <StatusPill status={r.status} />
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        {r.is_paid != null && <PaidBadge value={r.is_paid} />}
+                        <StatusPill status={r.status} />
+                      </span>
                     </div>
                     <div className="mt-0.5 truncate text-sm text-slate-500">{r.course_name || r.course_id}</div>
                     <div className="mt-1 text-xs text-slate-400">{pct(r.percentage_completed)} · {fmtDateShort(r.enrolled_at)}</div>
