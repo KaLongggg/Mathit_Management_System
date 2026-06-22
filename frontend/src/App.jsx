@@ -1,10 +1,13 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth.jsx';
 import { Spinner } from './components/ui.jsx';
 import Layout from './components/Layout.jsx';
 import Login from './pages/Login.jsx';
-import Dashboard from './pages/Dashboard.jsx';
 import Courses from './pages/Courses.jsx';
+
+// Dashboard pulls in the chart library — load it only when visited.
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 import CourseDetail from './pages/CourseDetail.jsx';
 import Students from './pages/Students.jsx';
 import StudentDetail from './pages/StudentDetail.jsx';
@@ -35,7 +38,14 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route element={<Protected />}>
         <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/dashboard"
+            element={
+              <Suspense fallback={<div className="flex justify-center py-20 text-brand-600"><Spinner size={24} /></div>}>
+                <Dashboard />
+              </Suspense>
+            }
+          />
           <Route path="/courses" element={<Courses />} />
           <Route path="/course/:id" element={<CourseDetail />} />
           <Route path="/students" element={<Students />} />

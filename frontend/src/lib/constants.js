@@ -11,4 +11,22 @@ export const COURSE_CLASS_STYLE = {
   'Give away': 'bg-emerald-100 text-emerald-700',
 };
 
+// Hex colours matching the class pills, for charts.
+export const COURSE_CLASS_COLORS = {
+  'All-in-one': '#37889b',
+  '補底班': '#f59e0b',
+  '常規班': '#64748b',
+  '精讀班': '#8b5cf6',
+  'By topic': '#0ea5e9',
+  'Give away': '#10b981',
+  Unclassified: '#cbd5e1',
+};
+
 export const ENROLMENT_STATUSES = ['active', 'completed', 'expired', 'pending'];
+
+export const ENROLMENT_STATUS_COLORS = {
+  active: '#37889b',
+  completed: '#10b981',
+  expired: '#f59e0b',
+  pending: '#94a3b8',
+};
