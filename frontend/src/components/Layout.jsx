@@ -17,7 +17,7 @@ function isActive(pathname, item) {
 function BrandMark({ compact = false }) {
   return (
     <div className="flex items-center gap-2.5">
-      <img src="/favicon.png" alt="" className="h-9 w-9 rounded-xl bg-white/95 p-1 shadow-sm" />
+      <img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" className="h-9 w-9 rounded-xl bg-white/95 p-1 shadow-sm" />
       {!compact && (
         <div className="leading-tight">
           <div className="font-display text-[15px] font-semibold text-white">Mathit</div>

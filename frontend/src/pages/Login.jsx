@@ -44,7 +44,7 @@ export default function Login() {
         />
         <div className="relative flex h-full flex-col justify-between p-12 text-white">
           <div className="flex items-center gap-3">
-            <img src="/favicon.png" alt="" className="h-11 w-11 rounded-2xl bg-white/95 p-1.5" />
+            <img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" className="h-11 w-11 rounded-2xl bg-white/95 p-1.5" />
             <span className="font-display text-lg font-semibold">Mathit Management</span>
           </div>
           <div className="max-w-md">
@@ -64,7 +64,7 @@ export default function Login() {
       <div className="flex items-center justify-center bg-paper px-5 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <img src="/favicon.png" alt="" className="h-10 w-10 rounded-xl" />
+            <img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" className="h-10 w-10 rounded-xl" />
             <span className="font-display text-lg font-semibold">Mathit Management</span>
           </div>
 

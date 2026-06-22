@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// base: './' so the built site works when served from any path.
-export default defineConfig({
+// On GitHub Pages the app is served from /<repo>/, so use that base for the
+// production build. Dev stays at root for convenience.
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: './',
+  base: command === 'build' ? '/Mathit_Management_System/' : '/',
   server: { port: 5173, host: true },
-});
+}));
