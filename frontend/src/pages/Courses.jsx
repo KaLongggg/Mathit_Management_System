@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
-import { PageHeader, SearchInput, EmptyState, ErrorBanner, SkeletonRows, ClassPill } from '../components/ui.jsx';
+import { PageHeader, SearchInput, EmptyState, ErrorBanner, SkeletonRows, ClassPill, useSort, sortRows, SortHeader } from '../components/ui.jsx';
 import { COURSE_CLASSES } from '../lib/constants.js';
 
 export default function Courses() {
@@ -9,7 +9,9 @@ export default function Courses() {
   const [klass, setKlass] = useState('');
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
+  const [sort, toggleSort] = useSort('course_name', 'asc');
   const navigate = useNavigate();
+  const sorted = sortRows(rows || [], sort);
 
   async function load(search = term, cls = klass) {
     setRows(null);
@@ -70,13 +72,13 @@ export default function Courses() {
             <table className="hidden w-full md:table">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-5 py-3 font-medium">ID</th>
-                  <th className="px-5 py-3 font-medium">Name</th>
-                  <th className="px-5 py-3 font-medium">Class</th>
+                  <SortHeader label="ID" sortKey="course_id" sort={sort} onToggle={toggleSort} />
+                  <SortHeader label="Name" sortKey="course_name" sort={sort} onToggle={toggleSort} />
+                  <SortHeader label="Class" sortKey="course_class" sort={sort} onToggle={toggleSort} />
                 </tr>
               </thead>
               <tbody>
-                {rows.map((c) => (
+                {sorted.map((c) => (
                   <tr
                     key={c.course_id}
                     onClick={() => navigate(`/course/${encodeURIComponent(c.course_id)}`)}
@@ -94,7 +96,7 @@ export default function Courses() {
             </table>
 
             <ul className="divide-y divide-slate-100 md:hidden">
-              {rows.map((c) => (
+              {sorted.map((c) => (
                 <li key={c.course_id}>
                   <button
                     onClick={() => navigate(`/course/${encodeURIComponent(c.course_id)}`)}

@@ -1,6 +1,53 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from './icons.jsx';
 import { COURSE_CLASS_STYLE } from '../lib/constants.js';
+
+// ---- click-to-sort helpers ----
+export function useSort(initialKey = null, initialDir = 'asc') {
+  const [sort, setSort] = useState({ key: initialKey, dir: initialDir });
+  const toggle = (key) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+  return [sort, toggle];
+}
+
+// Sort an in-memory array. `accessors` maps a key to a value getter for nested fields.
+export function sortRows(rows, sort, accessors = {}) {
+  if (!sort?.key) return rows;
+  const get = accessors[sort.key] || ((r) => r[sort.key]);
+  const dir = sort.dir === 'desc' ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const x = get(a);
+    const y = get(b);
+    if (x == null && y == null) return 0;
+    if (x == null) return 1; // nulls always last
+    if (y == null) return -1;
+    if (typeof x === 'number' && typeof y === 'number') return (x - y) * dir;
+    return String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: 'base' }) * dir;
+  });
+}
+
+export function SortHeader({ label, sortKey, sort, onToggle, align = 'left', className = '' }) {
+  const active = sort.key === sortKey;
+  return (
+    <th
+      className={`cursor-pointer select-none px-5 py-3 font-medium hover:text-slate-600 ${align === 'right' ? 'text-right' : ''} ${className}`}
+      onClick={() => onToggle(sortKey)}
+      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'flex-row-reverse' : ''}`}>
+        {label}
+        <svg
+          width="12" height="12" viewBox="0 0 24 24"
+          className={active ? 'text-brand-500' : 'text-slate-300'}
+          fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+        >
+          {active && sort.dir === 'desc' ? <path d="M6 9l6 6 6-6" /> : <path d="M6 15l6-6 6 6" />}
+        </svg>
+      </span>
+    </th>
+  );
+}
 
 export function ClassPill({ value }) {
   if (!value) return <span className="text-slate-400">-</span>;

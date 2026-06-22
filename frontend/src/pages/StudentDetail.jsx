@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { deleteStudent, enrolStudent, updateStudent } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
-import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Modal } from '../components/ui.jsx';
+import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Modal, useSort, sortRows, SortHeader } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
+import { ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
 
 function EnrolCourseForm({ studentId, onClose, onDone }) {
@@ -102,6 +103,23 @@ export default function StudentDetail() {
   const [enrols, setEnrols] = useState(null);
   const [showEnrol, setShowEnrol] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [eStatus, setEStatus] = useState('');
+  const [eFrom, setEFrom] = useState('');
+  const [eTo, setETo] = useState('');
+  const [eSort, toggleESort] = useSort('enrolled_at', 'desc');
+
+  const visibleEnrols = enrols
+    ? sortRows(
+        enrols.filter(
+          (e) =>
+            (!eStatus || e.status === eStatus) &&
+            (!eFrom || (e.enrolled_at && e.enrolled_at >= eFrom)) &&
+            (!eTo || (e.enrolled_at && e.enrolled_at <= eTo)),
+        ),
+        eSort,
+        { course: (e) => e.course?.course_name },
+      )
+    : null;
 
   const loadEnrols = useCallback(async () => {
     const { data, error } = await supabase
@@ -218,33 +236,52 @@ export default function StudentDetail() {
 
       {/* Enrolments */}
       <div className="mt-4 card overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Enrolments</h2>
-            {enrols && <span className="text-sm text-slate-400">{enrols.length} total</span>}
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">Enrolments</h2>
+              {enrols && (
+                <span className="text-sm text-slate-400">
+                  {visibleEnrols.length}{visibleEnrols.length !== enrols.length ? ` / ${enrols.length}` : ''}
+                </span>
+              )}
+            </div>
+            <button className="btn btn-sm btn-soft shrink-0" onClick={() => setShowEnrol(true)}>
+              <Icon name="plus" size={15} /> Enrol in course
+            </button>
           </div>
-          <button className="btn btn-sm btn-soft shrink-0" onClick={() => setShowEnrol(true)}>
-            <Icon name="plus" size={15} /> Enrol in course
-          </button>
+          {enrols && enrols.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-4">
+              <select className="input h-10" value={eStatus} onChange={(e) => setEStatus(e.target.value)} aria-label="Status">
+                <option value="">All statuses</option>
+                {ENROLMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <input className="input h-10" type="date" value={eFrom} onChange={(e) => setEFrom(e.target.value)} aria-label="Enrolled from" title="Enrolled from" />
+              <input className="input h-10" type="date" value={eTo} onChange={(e) => setETo(e.target.value)} aria-label="Enrolled to" title="Enrolled to" />
+              <button className="btn btn-ghost h-10" onClick={() => { setEStatus(''); setEFrom(''); setETo(''); }}>Clear</button>
+            </div>
+          )}
         </div>
 
         {enrols === null ? (
           <div className="p-5"><SkeletonRows rows={3} /></div>
         ) : enrols.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-slate-500">No enrolments yet.</p>
+        ) : visibleEnrols.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-slate-500">No enrolments match these filters.</p>
         ) : (
           <>
             <table className="hidden w-full md:table">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-5 py-3 font-medium">Course</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium">Completion</th>
-                  <th className="px-5 py-3 font-medium">Enrolled</th>
+                  <SortHeader label="Course" sortKey="course" sort={eSort} onToggle={toggleESort} />
+                  <SortHeader label="Status" sortKey="status" sort={eSort} onToggle={toggleESort} />
+                  <SortHeader label="Completion" sortKey="percentage_completed" sort={eSort} onToggle={toggleESort} />
+                  <SortHeader label="Enrolled" sortKey="enrolled_at" sort={eSort} onToggle={toggleESort} />
                 </tr>
               </thead>
               <tbody>
-                {enrols.map((e) => (
+                {visibleEnrols.map((e) => (
                   <tr
                     key={e.id}
                     onClick={() => navigate(`/enrolment/${encodeURIComponent(e.id)}`)}
@@ -263,7 +300,7 @@ export default function StudentDetail() {
             </table>
 
             <ul className="divide-y divide-slate-100 md:hidden">
-              {enrols.map((e) => (
+              {visibleEnrols.map((e) => (
                 <li key={e.id}>
                   <button
                     onClick={() => navigate(`/enrolment/${encodeURIComponent(e.id)}`)}
