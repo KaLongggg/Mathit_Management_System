@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner } from '../components/ui.jsx';
@@ -17,7 +17,11 @@ export default function EnrolmentDetail() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from('enrolments').select('*').eq('id', id).maybeSingle();
+      const { data, error } = await supabase
+        .from('enrolments')
+        .select('*, student:student_id ( phone_number, postal_address )')
+        .eq('id', id)
+        .maybeSingle();
       if (error) setError(error.message);
       else if (!data) setError('Enrolment not found.');
       else {
@@ -87,6 +91,20 @@ export default function EnrolmentDetail() {
               <h2 className="text-lg font-semibold">Admin</h2>
               <span className="pill pill-slate">Local</span>
             </div>
+
+            {/* Student contact (read-only here — edit on the student page) */}
+            <div className="mb-4 grid gap-4 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
+              <Field label="WhatsApp / Phone">{rec.student?.phone_number}</Field>
+              <Field label="Shipping address" full>
+                {rec.student?.postal_address ? <span className="whitespace-pre-wrap">{rec.student.postal_address}</span> : null}
+              </Field>
+              <div className="sm:col-span-2">
+                <Link to={`/student/${encodeURIComponent(rec.student_id)}`} className="text-xs font-medium text-brand-700 hover:text-brand-800">
+                  Edit contact on student page →
+                </Link>
+              </div>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="label" htmlFor="delivery_mode">Delivery mode</label>
