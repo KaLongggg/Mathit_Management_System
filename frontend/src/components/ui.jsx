@@ -1,5 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Icon } from './icons.jsx';
+import { COURSE_CLASS_STYLE } from '../lib/constants.js';
+
+export function ClassPill({ value }) {
+  if (!value) return <span className="text-slate-400">-</span>;
+  const cls = COURSE_CLASS_STYLE[value] || 'bg-slate-100 text-slate-600';
+  return <span className={`pill ${cls}`}>{value}</span>;
+}
 
 export function Spinner({ size = 18, className = '' }) {
   return (
