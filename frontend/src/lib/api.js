@@ -21,6 +21,21 @@ export async function callAdmin(body) {
   return data;
 }
 
+export async function gaReport() {
+  const { data, error } = await supabase.functions.invoke('ga-report', { body: {} });
+  if (error) {
+    let msg = error.message || 'Request failed';
+    try {
+      const ctx = await error.context?.json?.();
+      if (ctx?.error) msg = ctx.error;
+    } catch {
+      /* keep default */
+    }
+    throw new Error(msg);
+  }
+  return data;
+}
+
 export const createStudent = (fields) => callAdmin({ action: 'create_student', ...fields });
 export const updateStudent = (student_id, fields) => callAdmin({ action: 'update_student', student_id, ...fields });
 export const deleteStudent = (student_id) => callAdmin({ action: 'delete_student', student_id });

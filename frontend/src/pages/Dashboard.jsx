@@ -5,14 +5,17 @@ import {
   PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 import { supabase } from '../lib/supabase.js';
+import { gaReport } from '../lib/api.js';
 import { Icon } from '../components/icons.jsx';
-import { PageHeader } from '../components/ui.jsx';
+import { PageHeader, ErrorBanner } from '../components/ui.jsx';
 import {
   COURSE_CLASSES, COURSE_CLASS_COLORS, ENROLMENT_STATUSES, ENROLMENT_STATUS_COLORS,
 } from '../lib/constants.js';
 
 const CLASS_ORDER = [...COURSE_CLASSES, 'Unclassified'];
 const fmtMonth = (m) => new Date(m).toLocaleDateString('en', { month: 'short', year: '2-digit' });
+// GA returns dates as YYYYMMDD
+const fmtGADate = (d) => `${d.slice(4, 6)}/${d.slice(6, 8)}`;
 
 async function count(table, build) {
   let q = supabase.from(table).select('*', { count: 'exact', head: true });
@@ -62,6 +65,15 @@ export default function Dashboard() {
   const [classMix, setClassMix] = useState([]);
   const [studentsMonth, setStudentsMonth] = useState([]);
   const [topCourses, setTopCourses] = useState([]);
+  const [ga, setGa] = useState({ loading: true });
+
+  useEffect(() => {
+    let active = true;
+    gaReport()
+      .then((d) => active && setGa({ loading: false, ...d }))
+      .catch((e) => active && setGa({ loading: false, configured: true, error: e.message }));
+    return () => { active = false; };
+  }, []);
 
   const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
   const weekAgoDate = weekAgo.slice(0, 10);
@@ -234,6 +246,89 @@ export default function Dashboard() {
             </ResponsiveContainer>
           )}
         </ChartCard>
+      </div>
+
+      {/* Website analytics (Google Analytics) */}
+      <div className="mt-8">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h2 className="font-display text-lg font-semibold">Website · mathit.hk</h2>
+          <span className="pill pill-slate">Google Analytics · 30 days</span>
+        </div>
+
+        {ga.loading ? (
+          <div className="skeleton h-48 w-full rounded-2xl" />
+        ) : !ga.configured ? (
+          <div className="card p-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600">
+                <Icon name="trending" size={20} />
+              </span>
+              <div>
+                <p className="font-medium text-slate-700">Connect Google Analytics</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Set <code className="font-mono text-xs">GA_PROPERTY_ID</code> and{' '}
+                  <code className="font-mono text-xs">GA_SERVICE_ACCOUNT</code> as secrets on the{' '}
+                  <span className="font-medium">ga-report</span> function, and grant that service account Viewer
+                  access to the GA4 property. Then refresh.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : ga.error ? (
+          <div className="card p-6"><ErrorBanner message={`Google Analytics: ${ga.error}`} /></div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4 sm:max-w-md">
+              <StatCard icon="trending" label="Sessions (30d)" value={ga.totals?.sessions} />
+              <StatCard icon="users" label="Active users (30d)" value={ga.totals?.users} />
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <ChartCard title="Traffic" subtitle="Sessions & users · last 30 days">
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={ga.traffic} margin={{ left: -16, right: 8, top: 4 }}>
+                    <defs>
+                      <linearGradient id="g-sess" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#37889b" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#37889b" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="g-usr" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f6" />
+                    <XAxis dataKey="date" tickFormatter={fmtGADate} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} minTickGap={24} />
+                    <YAxis tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                    <Tooltip contentStyle={tooltipStyle} labelFormatter={fmtGADate} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Area type="monotone" dataKey="sessions" name="Sessions" stroke="#37889b" strokeWidth={2} fill="url(#g-sess)" />
+                    <Area type="monotone" dataKey="users" name="Users" stroke="#8b5cf6" strokeWidth={2} fill="url(#g-usr)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartCard>
+
+              <ChartCard title="Top pages" subtitle="Most-viewed · last 30 days">
+                {!ga.topPages || ga.topPages.length === 0 ? (
+                  <p className="py-12 text-center text-sm text-slate-400">No page data.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart
+                      data={ga.topPages.map((p) => ({ name: p.path.length > 26 ? p.path.slice(0, 26) + '…' : p.path, views: p.views }))}
+                      layout="vertical"
+                      margin={{ left: 8, right: 16 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eef2f6" />
+                      <XAxis type="number" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 11, fill: '#475569' }} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#f1f5f9' }} />
+                      <Bar dataKey="views" fill="#37889b" radius={[0, 6, 6, 0]} maxBarSize={22} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </ChartCard>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
