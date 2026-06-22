@@ -5,6 +5,7 @@ import { deleteStudent, enrolStudent, updateStudent } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Modal, useSort, sortRows, SortHeader } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
+import { MultiSelect } from '../components/MultiSelect.jsx';
 import { ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
 
@@ -103,7 +104,7 @@ export default function StudentDetail() {
   const [enrols, setEnrols] = useState(null);
   const [showEnrol, setShowEnrol] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [eStatus, setEStatus] = useState('');
+  const [eStatusSel, setEStatusSel] = useState([]);
   const [eFrom, setEFrom] = useState('');
   const [eTo, setETo] = useState('');
   const [eSort, toggleESort] = useSort('enrolled_at', 'desc');
@@ -112,7 +113,7 @@ export default function StudentDetail() {
     ? sortRows(
         enrols.filter(
           (e) =>
-            (!eStatus || e.status === eStatus) &&
+            (eStatusSel.length === 0 || eStatusSel.includes(e.status)) &&
             (!eFrom || (e.enrolled_at && e.enrolled_at >= eFrom)) &&
             (!eTo || (e.enrolled_at && e.enrolled_at <= eTo)),
         ),
@@ -252,13 +253,10 @@ export default function StudentDetail() {
           </div>
           {enrols && enrols.length > 0 && (
             <div className="grid gap-2 sm:grid-cols-4">
-              <select className="input h-10" value={eStatus} onChange={(e) => setEStatus(e.target.value)} aria-label="Status">
-                <option value="">All statuses</option>
-                {ENROLMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <MultiSelect label="Status" options={ENROLMENT_STATUSES} selected={eStatusSel} onChange={setEStatusSel} />
               <input className="input h-10" type="date" value={eFrom} onChange={(e) => setEFrom(e.target.value)} aria-label="Enrolled from" title="Enrolled from" />
               <input className="input h-10" type="date" value={eTo} onChange={(e) => setETo(e.target.value)} aria-label="Enrolled to" title="Enrolled to" />
-              <button className="btn btn-ghost h-10" onClick={() => { setEStatus(''); setEFrom(''); setETo(''); }}>Clear</button>
+              <button className="btn btn-ghost h-10" onClick={() => { setEStatusSel([]); setEFrom(''); setETo(''); }}>Clear</button>
             </div>
           )}
         </div>

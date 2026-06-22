@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { PageHeader, SearchInput, EmptyState, ErrorBanner, SkeletonRows, StatusPill, useSort, SortHeader } from '../components/ui.jsx';
+import { MultiSelect } from '../components/MultiSelect.jsx';
 import { ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, pct } from '../lib/format.js';
 
@@ -10,7 +11,7 @@ const EMPTY = { term: '', dse: '', from: '', to: '' };
 export default function Enrolments() {
   const [draft, setDraft] = useState(EMPTY);
   const [committed, setCommitted] = useState(EMPTY);
-  const [status, setStatus] = useState('');
+  const [statusSel, setStatusSel] = useState([]);
   const [sort, toggleSort] = useSort('enrolled_at', 'desc');
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
@@ -29,7 +30,7 @@ export default function Enrolments() {
       const s = term.trim().replace(/[,()]/g, '\\$&');
       q = q.or([`id.ilike.%${s}%`, `student_id.ilike.%${s}%`, `course_id.ilike.%${s}%`, `user_name.ilike.%${s}%`].join(','));
     }
-    if (status) q = q.eq('status', status);
+    if (statusSel.length) q = q.in('status', statusSel);
     if (dse.trim()) q = q.eq('student.dse_year', dse.trim());
     if (from) q = q.gte('enrolled_at', from);
     if (to) q = q.lte('enrolled_at', to);
@@ -37,7 +38,7 @@ export default function Enrolments() {
     const { data, error } = await q;
     if (error) { setError(error.message); setRows([]); return; }
     setRows(data || []);
-  }, [committed, status, sort]);
+  }, [committed, statusSel, sort]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -54,10 +55,7 @@ export default function Enrolments() {
           <div className="lg:col-span-2">
             <SearchInput value={draft.term} onChange={(v) => setDraft((x) => ({ ...x, term: v }))} onSubmit={apply} placeholder="Search enrolment, student, course, name…" />
           </div>
-          <select className="input" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-            <option value="">All statuses</option>
-            {ENROLMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <MultiSelect label="Status" options={ENROLMENT_STATUSES} selected={statusSel} onChange={setStatusSel} />
           <input className="input" placeholder="DSE year" value={draft.dse} onChange={set('dse')} onKeyDown={onEnter} />
           <div className="grid grid-cols-2 gap-2 lg:col-span-1">
             <input className="input" type="date" value={draft.from} onChange={set('from')} aria-label="Enrolled from" title="Enrolled from" />
@@ -66,7 +64,7 @@ export default function Enrolments() {
         </div>
         <div className="mt-3 flex gap-2">
           <button className="btn btn-primary" onClick={apply}>Apply filters</button>
-          <button className="btn btn-ghost" onClick={() => { setDraft(EMPTY); setCommitted(EMPTY); setStatus(''); }}>Clear</button>
+          <button className="btn btn-ghost" onClick={() => { setDraft(EMPTY); setCommitted(EMPTY); setStatusSel([]); }}>Clear</button>
         </div>
       </div>
 

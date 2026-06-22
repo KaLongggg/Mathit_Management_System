@@ -6,35 +6,60 @@ import {
   PageHeader, Field, ErrorBanner, SkeletonRows, Spinner, StatusPill, SearchInput,
   useSort, sortRows, SortHeader,
 } from '../components/ui.jsx';
+import { MultiSelect } from '../components/MultiSelect.jsx';
+import { Icon } from '../components/icons.jsx';
 import { COURSE_CLASSES, ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
 
-function CourseRoster({ courseId }) {
+// Build a recipients SQL query (used as a scheduler distribution list).
+function buildRosterSql(courseId, { statuses, dseYears, levels }) {
+  const qv = (v) => `'${String(v).replace(/'/g, "''")}'`;
+  let sql =
+    `SELECT s.student_id, s.first_name, s.last_name, s.full_name, s.phone_number,\n` +
+    `       s.dse_year, s.dse_aim, s.current_level\n` +
+    `FROM student s\n` +
+    `JOIN enrolments e ON e.student_id = s.student_id\n` +
+    `WHERE e.course_id = ${qv(courseId)}\n` +
+    `  AND s.phone_number IS NOT NULL AND s.phone_number <> ''`;
+  if (statuses.length) sql += `\n  AND e.status IN (${statuses.map(qv).join(', ')})`;
+  if (dseYears.length) sql += `\n  AND s.dse_year IN (${dseYears.map(qv).join(', ')})`;
+  if (levels.length) sql += `\n  AND s.current_level IN (${levels.map(qv).join(', ')})`;
+  return sql;
+}
+
+function CourseRoster({ courseId, courseName }) {
   const navigate = useNavigate();
+  const toast = useToast();
   const [all, setAll] = useState(null);
   const [error, setError] = useState('');
   const [term, setTerm] = useState('');
-  const [status, setStatus] = useState('');
+  const [statusSel, setStatusSel] = useState([]);
+  const [dseSel, setDseSel] = useState([]);
+  const [levelSel, setLevelSel] = useState([]);
   const [sort, toggleSort] = useSort('enrolled_at', 'desc');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     setAll(null);
     setError('');
     supabase
       .from('enrolments')
-      .select('id, student_id, status, percentage_completed, enrolled_at, user_name, user_email, student:student_id ( first_name, last_name, phone_number, dse_year )')
+      .select('id, student_id, status, percentage_completed, enrolled_at, user_name, user_email, student:student_id ( first_name, last_name, phone_number, dse_year, current_level )')
       .eq('course_id', courseId)
       .order('enrolled_at', { ascending: false })
       .limit(1000)
-      .then(({ data, error }) => {
-        if (error) { setError(error.message); setAll([]); } else setAll(data || []);
-      });
+      .then(({ data, error }) => { if (error) { setError(error.message); setAll([]); } else setAll(data || []); });
   }, [courseId]);
 
   const name = (r) => fullName(r.student) || r.user_name || r.student_id;
+  const dseOptions = [...new Set((all || []).map((r) => r.student?.dse_year).filter(Boolean))].sort();
+  const levelOptions = [...new Set((all || []).map((r) => r.student?.current_level).filter(Boolean))].sort();
+
   const filtered = (all || []).filter(
     (r) =>
-      (!status || r.status === status) &&
+      (statusSel.length === 0 || statusSel.includes(r.status)) &&
+      (dseSel.length === 0 || dseSel.includes(r.student?.dse_year)) &&
+      (levelSel.length === 0 || levelSel.includes(r.student?.current_level)) &&
       (!term.trim() || name(r).toLowerCase().includes(term.trim().toLowerCase())),
   );
   const rows = sortRows(filtered, sort, {
@@ -42,25 +67,47 @@ function CourseRoster({ courseId }) {
     phone: (r) => r.student?.phone_number,
     dse: (r) => r.student?.dse_year,
   });
+  const withPhone = filtered.filter((r) => r.student?.phone_number).length;
+
+  async function createScheduler() {
+    setCreating(true);
+    const sql = buildRosterSql(courseId, { statuses: statusSel, dseYears: dseSel, levels: levelSel });
+    const bits = [];
+    if (statusSel.length) bits.push(statusSel.join('/'));
+    if (dseSel.length) bits.push(`DSE ${dseSel.join('/')}`);
+    if (levelSel.length) bits.push(levelSel.join('/'));
+    const schedName = `${courseName || 'Course'} — ${bits.join(', ') || 'all enrolled'}`.slice(0, 120);
+    const { data, error } = await supabase
+      .from('whatsapp_schedules')
+      .insert({ name: schedName, cron_expr: '0 10 * * *', timezone: 'Asia/Hong_Kong', sql_query: sql, message_template: '', active: false })
+      .select('id')
+      .single();
+    setCreating(false);
+    if (error) return toast(error.message, 'error');
+    toast(`Draft scheduler created for ${withPhone} recipients (inactive).`, 'success');
+    navigate(`/scheduler/${data.id}`);
+  }
 
   return (
     <div className="mt-4 card overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:p-5">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">Enrolled students</h2>
-          {all && (
-            <span className="text-sm text-slate-400">
-              {filtered.length}{filtered.length !== all.length ? ` / ${all.length}` : ''}
-            </span>
-          )}
+      <div className="border-b border-slate-100 p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Enrolled students</h2>
+            {all && <span className="text-sm text-slate-400">{filtered.length}{filtered.length !== all.length ? ` / ${all.length}` : ''}</span>}
+          </div>
+          <button className="btn btn-sm btn-primary shrink-0" onClick={createScheduler} disabled={creating || withPhone === 0} title={withPhone === 0 ? 'No recipients with a WhatsApp number' : ''}>
+            {creating ? <Spinner size={14} /> : <><Icon name="scheduler" size={15} /> Create scheduler</>}
+          </button>
         </div>
-        <div className="flex flex-1 gap-2 sm:ml-auto sm:max-w-md">
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <SearchInput value={term} onChange={setTerm} placeholder="Search by name…" />
-          <select className="input sm:w-40" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
-            <option value="">All statuses</option>
-            {ENROLMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <MultiSelect label="Status" options={ENROLMENT_STATUSES} selected={statusSel} onChange={setStatusSel} />
+          <MultiSelect label="DSE year" options={dseOptions} selected={dseSel} onChange={setDseSel} />
+          <MultiSelect label="Current level" options={levelOptions} selected={levelSel} onChange={setLevelSel} />
         </div>
+        <p className="mt-2 text-xs text-slate-400">“Create scheduler” builds a draft WhatsApp campaign whose recipients are the filtered students with a phone number ({withPhone}). It’s created inactive — add a message and activate it.</p>
       </div>
 
       <ErrorBanner message={error} />
@@ -84,11 +131,7 @@ function CourseRoster({ courseId }) {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr
-                  key={r.id}
-                  onClick={() => navigate(`/student/${encodeURIComponent(r.student_id)}`)}
-                  className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-brand-50/60"
-                >
+                <tr key={r.id} onClick={() => navigate(`/student/${encodeURIComponent(r.student_id)}`)} className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-brand-50/60">
                   <td className="px-5 py-3">
                     <div className="font-medium text-slate-800">{name(r)}</div>
                     <div className="text-xs text-slate-400">{r.user_email || ''}</div>
@@ -113,8 +156,8 @@ function CourseRoster({ courseId }) {
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-4 text-xs text-slate-400">
                     <span>{r.student?.phone_number || 'no phone'}</span>
+                    <span>{r.student?.dse_year || '—'}</span>
                     <span>{pct(r.percentage_completed)}</span>
-                    <span>{fmtDateShort(r.enrolled_at)}</span>
                   </div>
                 </button>
               </li>
@@ -200,7 +243,7 @@ export default function CourseDetail() {
             </div>
           </div>
 
-          <CourseRoster courseId={id} />
+          <CourseRoster courseId={id} courseName={course.course_name} />
         </>
       ) : null}
     </>
