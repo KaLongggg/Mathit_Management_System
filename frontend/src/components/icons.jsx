@@ -111,6 +111,14 @@ const PATHS = {
     </>
   ),
   chevronDown: <path d="M6 9l6 6 6-6" />,
+  x: <path d="M6 6l12 12M18 6L6 18" />,
+  userPlus: (
+    <>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 10 0" />
+      <path d="M17 8v6M14 11h6" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 20, className = '', strokeWidth = 1.7 }) {

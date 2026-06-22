@@ -8,6 +8,35 @@ export function ClassPill({ value }) {
   return <span className={`pill ${cls}`}>{value}</span>;
 }
 
+export function Modal({ open, onClose, title, children }) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm sm:items-center sm:p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="card max-h-[92dvh] w-full max-w-lg animate-slide-up overflow-auto rounded-b-none sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="-mr-1.5 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          >
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function Spinner({ size = 18, className = '' }) {
   return (
     <svg

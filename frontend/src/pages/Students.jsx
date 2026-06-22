@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
-import { PageHeader, EmptyState, ErrorBanner, Spinner } from '../components/ui.jsx';
+import { createStudent } from '../lib/api.js';
+import { useToast } from '../components/Toast.jsx';
+import { PageHeader, EmptyState, ErrorBanner, Spinner, Modal } from '../components/ui.jsx';
+import { Icon } from '../components/icons.jsx';
 import { fullName } from '../lib/format.js';
 
 const PAGE = 30;
@@ -17,14 +20,89 @@ function buildQuery(f) {
   return q;
 }
 
+function AddStudentForm({ onClose }) {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [f, setF] = useState({ first_name: '', last_name: '', email: '', phone_number: '', dse_year: '', current_level: '' });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!f.first_name.trim() || !f.last_name.trim() || !f.email.trim()) {
+      setErr('First name, last name and email are required.');
+      return;
+    }
+    setErr('');
+    setBusy(true);
+    try {
+      const { student } = await createStudent({
+        first_name: f.first_name.trim(),
+        last_name: f.last_name.trim(),
+        email: f.email.trim(),
+        phone_number: f.phone_number.trim(),
+        dse_year: f.dse_year.trim(),
+        current_level: f.current_level.trim(),
+      });
+      toast('Student created.', 'success');
+      onClose();
+      navigate(`/student/${encodeURIComponent(student.student_id)}`);
+    } catch (ex) {
+      setErr(ex.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label">First name *</label>
+          <input className="input" value={f.first_name} onChange={set('first_name')} autoFocus />
+        </div>
+        <div>
+          <label className="label">Last name *</label>
+          <input className="input" value={f.last_name} onChange={set('last_name')} />
+        </div>
+      </div>
+      <div>
+        <label className="label">Email *</label>
+        <input type="email" className="input" value={f.email} onChange={set('email')} />
+      </div>
+      <div>
+        <label className="label">WhatsApp / Phone</label>
+        <input className="input" value={f.phone_number} onChange={set('phone_number')} />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label">DSE Year (optional)</label>
+          <input className="input" value={f.dse_year} onChange={set('dse_year')} placeholder="e.g. 2027" />
+        </div>
+        <div>
+          <label className="label">Level (optional)</label>
+          <input className="input" value={f.current_level} onChange={set('current_level')} />
+        </div>
+      </div>
+      <ErrorBanner message={err} />
+      <p className="text-xs text-slate-400">Creates the account in Thinkific (a welcome email is sent) and adds them here.</p>
+      <div className="flex gap-2 pt-1">
+        <button className="btn btn-primary" disabled={busy}>{busy ? <Spinner /> : 'Create student'}</button>
+        <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
 export default function Students() {
   const [draft, setDraft] = useState(EMPTY);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
 
-  // refs to avoid stale closures inside the IntersectionObserver
   const filtersRef = useRef(EMPTY);
   const offsetRef = useRef(0);
   const loadingRef = useRef(false);
@@ -64,19 +142,14 @@ export default function Students() {
     loadMore();
   }
 
-  // initial load
   useEffect(() => {
     loadMore();
   }, [loadMore]);
 
-  // infinite scroll
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => entries[0].isIntersecting && loadMore(),
-      { rootMargin: '300px' },
-    );
+    const obs = new IntersectionObserver((e) => e[0].isIntersecting && loadMore(), { rootMargin: '300px' });
     obs.observe(el);
     return () => obs.disconnect();
   }, [loadMore]);
@@ -86,7 +159,15 @@ export default function Students() {
 
   return (
     <>
-      <PageHeader title="Students" subtitle="Filter, then scroll to load more." />
+      <PageHeader
+        title="Students"
+        subtitle="Filter, then scroll to load more."
+        actions={
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            <Icon name="userPlus" size={16} /> Add student
+          </button>
+        }
+      />
 
       <div className="card p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -131,7 +212,6 @@ export default function Students() {
               ))}
             </div>
 
-            {/* sentinel + status */}
             <div ref={sentinelRef} className="flex items-center justify-center py-6 text-sm text-slate-400">
               {loading ? (
                 <span className="flex items-center gap-2"><Spinner size={16} /> Loading…</span>
@@ -144,6 +224,10 @@ export default function Students() {
           </>
         )}
       </div>
+
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add student">
+        <AddStudentForm onClose={() => setShowAdd(false)} />
+      </Modal>
     </>
   );
 }

@@ -1,10 +1,82 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
+import { enrolStudent } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
-import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner } from '../components/ui.jsx';
+import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Modal } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
+
+function EnrolCourseForm({ studentId, onClose, onDone }) {
+  const toast = useToast();
+  const [term, setTerm] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(true);
+  const [busyId, setBusyId] = useState(null);
+  const [err, setErr] = useState('');
+
+  const search = useCallback(async (t = '') => {
+    setSearching(true);
+    let q = supabase.from('course').select('course_id,course_name').order('course_name').limit(25);
+    if (t.trim()) q = q.or(`course_name.ilike.%${t.trim()}%,course_id.ilike.%${t.trim()}%`);
+    const { data } = await q;
+    setResults(data || []);
+    setSearching(false);
+  }, []);
+
+  useEffect(() => { search(); }, [search]);
+
+  async function enrol(c) {
+    setErr('');
+    setBusyId(c.course_id);
+    try {
+      await enrolStudent(studentId, c.course_id);
+      toast('Enrolled.', 'success');
+      onDone();
+      onClose();
+    } catch (ex) {
+      setErr(ex.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          className="input"
+          placeholder="Search course…"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && search(term)}
+          autoFocus
+        />
+        <button className="btn btn-ghost" onClick={() => search(term)}>Search</button>
+      </div>
+      <ErrorBanner message={err} />
+      <div className="max-h-80 divide-y divide-slate-100 overflow-auto rounded-xl border border-slate-200">
+        {searching ? (
+          <div className="p-4 text-sm text-slate-400">Searching…</div>
+        ) : results.length === 0 ? (
+          <div className="p-4 text-sm text-slate-400">No courses found.</div>
+        ) : (
+          results.map((c) => (
+            <div key={c.course_id} className="flex items-center gap-2 px-3 py-2.5">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-slate-800">{c.course_name}</div>
+                <div className="font-mono text-xs text-slate-400">{c.course_id}</div>
+              </div>
+              <button className="btn btn-sm btn-primary" disabled={busyId === c.course_id} onClick={() => enrol(c)}>
+                {busyId === c.course_id ? <Spinner size={14} /> : 'Enrol'}
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FIELDS = [
@@ -28,6 +100,16 @@ export default function StudentDetail() {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [enrols, setEnrols] = useState(null);
+  const [showEnrol, setShowEnrol] = useState(false);
+
+  const loadEnrols = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('enrolments')
+      .select('id, course_id, status, percentage_completed, enrolled_at, course:course_id ( course_name )')
+      .eq('student_id', id)
+      .order('enrolled_at', { ascending: false });
+    setEnrols(error ? [] : data || []);
+  }, [id]);
 
   useEffect(() => {
     (async () => {
@@ -35,15 +117,8 @@ export default function StudentDetail() {
       if (error) setError(error.message);
       else setStudent(data);
     })();
-    (async () => {
-      const { data, error } = await supabase
-        .from('enrolments')
-        .select('id, course_id, status, percentage_completed, enrolled_at, course:course_id ( course_name )')
-        .eq('student_id', id)
-        .order('enrolled_at', { ascending: false });
-      setEnrols(error ? [] : data || []);
-    })();
-  }, [id]);
+    loadEnrols();
+  }, [id, loadEnrols]);
 
   function startEdit() {
     setForm(Object.fromEntries(FIELDS.map(([k]) => [k, student[k] ?? ''])));
@@ -116,9 +191,14 @@ export default function StudentDetail() {
 
       {/* Enrolments */}
       <div className="mt-4 card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <h2 className="text-lg font-semibold">Enrolments</h2>
-          {enrols && <span className="text-sm text-slate-400">{enrols.length} total</span>}
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Enrolments</h2>
+            {enrols && <span className="text-sm text-slate-400">{enrols.length} total</span>}
+          </div>
+          <button className="btn btn-sm btn-soft shrink-0" onClick={() => setShowEnrol(true)}>
+            <Icon name="plus" size={15} /> Enrol in course
+          </button>
         </div>
 
         {enrols === null ? (
@@ -176,6 +256,10 @@ export default function StudentDetail() {
           </>
         )}
       </div>
+
+      <Modal open={showEnrol} onClose={() => setShowEnrol(false)} title="Enrol in a course">
+        <EnrolCourseForm studentId={id} onClose={() => setShowEnrol(false)} onDone={loadEnrols} />
+      </Modal>
     </>
   );
 }
