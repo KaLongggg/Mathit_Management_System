@@ -14,7 +14,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 // Store-specific custom profile field definition ids.
-const CPF = { phone_number: 47809, dse_year: 48189, current_level: 47810 };
+const CPF = { phone_number: 47809, dse_year: 48189, dse_aim: 63517, current_level: 47810 };
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -127,6 +127,44 @@ Deno.serve(async (req) => {
       const { error } = await db.from("enrolments").upsert(row, { onConflict: "id" });
       if (error) return json({ error: "Enrolled in Thinkific but the local save failed: " + error.message, enrolment: row }, 207);
       return json({ enrolment: row });
+    }
+
+    if (payload?.action === "update_student") {
+      const studentId = norm(payload.student_id);
+      if (!studentId) return json({ error: "student_id is required." }, 400);
+
+      const body: any = { skip_custom_fields_validation: true };
+      if (payload.first_name !== undefined) body.first_name = norm(payload.first_name);
+      if (payload.last_name !== undefined) body.last_name = norm(payload.last_name);
+      if (payload.email !== undefined && norm(payload.email)) body.email = norm(payload.email).toLowerCase();
+
+      const custom: any[] = [];
+      const setIf = (key: string, id: number) => {
+        if (payload[key] !== undefined) custom.push({ custom_profile_field_definition_id: id, value: norm(payload[key]) });
+      };
+      setIf("phone_number", CPF.phone_number);
+      setIf("dse_year", CPF.dse_year);
+      setIf("dse_aim", CPF.dse_aim);
+      setIf("current_level", CPF.current_level);
+      if (custom.length) body.custom_profile_fields = custom;
+
+      const r = await thinkific(`/users/${studentId}`, "PUT", body);
+      if (!r.ok) return json({ error: "Thinkific could not update the user.", status: r.status, detail: r.data }, 400);
+
+      const u = r.data;
+      const row: any = {
+        first_name: u.first_name ?? norm(payload.first_name),
+        last_name: u.last_name ?? norm(payload.last_name),
+        full_name: u.full_name ?? `${norm(payload.first_name)} ${norm(payload.last_name)}`.trim(),
+        email: (u.email ?? norm(payload.email)).toLowerCase() || null,
+        phone_number: norm(payload.phone_number) || null,
+        dse_year: norm(payload.dse_year) || null,
+        dse_aim: norm(payload.dse_aim) || null,
+        current_level: norm(payload.current_level) || null,
+      };
+      const { data: saved, error } = await db.from("student").update(row).eq("student_id", studentId).select().single();
+      if (error) return json({ error: "Updated in Thinkific but the local save failed: " + error.message }, 207);
+      return json({ student: saved });
     }
 
     return json({ error: "Unknown action" }, 400);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
-import { enrolStudent } from '../lib/api.js';
+import { enrolStudent, updateStudent } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Modal } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
@@ -131,13 +131,18 @@ export default function StudentDetail() {
       return;
     }
     setSaving(true);
-    const payload = Object.fromEntries(FIELDS.map(([k]) => [k, form[k]?.trim?.() ? form[k].trim() : form[k] || null]));
-    const { data, error } = await supabase.from('student').update(payload).eq('student_id', id).select().single();
-    setSaving(false);
-    if (error) return toast(error.message, 'error');
-    setStudent(data);
-    setEdit(false);
-    toast('Saved.', 'success');
+    try {
+      // Push the edit to Thinkific (and the local table) via the edge function.
+      const fields = Object.fromEntries(FIELDS.map(([k]) => [k, (form[k] ?? '').toString().trim()]));
+      const { student: saved } = await updateStudent(id, fields);
+      setStudent(saved);
+      setEdit(false);
+      toast('Saved to Thinkific.', 'success');
+    } catch (ex) {
+      toast(ex.message, 'error');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (error) return (<><PageHeader title="Student" backTo="/students" /><ErrorBanner message={error} /></>);

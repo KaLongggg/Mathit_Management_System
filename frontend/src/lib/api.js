@@ -22,4 +22,5 @@ export async function callAdmin(body) {
 }
 
 export const createStudent = (fields) => callAdmin({ action: 'create_student', ...fields });
+export const updateStudent = (student_id, fields) => callAdmin({ action: 'update_student', student_id, ...fields });
 export const enrolStudent = (student_id, course_id) => callAdmin({ action: 'enrol', student_id, course_id });
