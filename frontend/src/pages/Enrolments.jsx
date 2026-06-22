@@ -18,6 +18,7 @@ export default function Enrolments() {
   const [draft, setDraft] = useState(EMPTY);
   const [committed, setCommitted] = useState(EMPTY);
   const [statusSel, setStatusSel] = useState([]);
+  const [paid, setPaid] = useState('');
   const [sort, toggleSort] = useSort('enrolled_at', 'desc');
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
@@ -37,6 +38,9 @@ export default function Enrolments() {
       q = q.or([`id.ilike.%${s}%`, `student_id.ilike.%${s}%`, `course_id.ilike.%${s}%`, `user_name.ilike.%${s}%`].join(','));
     }
     if (statusSel.length) q = q.in('status', statusSel);
+    if (paid === 'paid') q = q.eq('is_paid', true);
+    else if (paid === 'unpaid') q = q.eq('is_paid', false);
+    else if (paid === 'unset') q = q.is('is_paid', null);
     if (dse.trim()) q = q.eq('student.dse_year', dse.trim());
     if (from) q = q.gte('enrolled_at', from);
     if (to) q = q.lte('enrolled_at', to);
@@ -44,7 +48,7 @@ export default function Enrolments() {
     const { data, error } = await q;
     if (error) { setError(error.message); setRows([]); return; }
     setRows(data || []);
-  }, [committed, statusSel, sort]);
+  }, [committed, statusSel, paid, sort]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -57,12 +61,18 @@ export default function Enrolments() {
       <PageHeader title="Enrolments" subtitle="Synced from Thinkific." />
 
       <div className="card mb-4 p-4 sm:p-5">
-        <div className="grid gap-3 lg:grid-cols-5">
+        <div className="grid gap-3 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <SearchInput value={draft.term} onChange={(v) => setDraft((x) => ({ ...x, term: v }))} onSubmit={apply} placeholder="Search enrolment, student, course, name…" />
           </div>
           <MultiSelect label="Status" options={ENROLMENT_STATUSES} selected={statusSel} onChange={setStatusSel} />
           <input className="input" placeholder="DSE year" value={draft.dse} onChange={set('dse')} onKeyDown={onEnter} />
+          <select className="input" value={paid} onChange={(e) => setPaid(e.target.value)} aria-label="Paid">
+            <option value="">Paid: all</option>
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="unset">Not set</option>
+          </select>
           <div className="grid grid-cols-2 gap-2 lg:col-span-1">
             <input className="input" type="date" value={draft.from} onChange={set('from')} aria-label="Enrolled from" title="Enrolled from" />
             <input className="input" type="date" value={draft.to} onChange={set('to')} aria-label="Enrolled to" title="Enrolled to" />
@@ -70,7 +80,7 @@ export default function Enrolments() {
         </div>
         <div className="mt-3 flex gap-2">
           <button className="btn btn-primary" onClick={apply}>Apply filters</button>
-          <button className="btn btn-ghost" onClick={() => { setDraft(EMPTY); setCommitted(EMPTY); setStatusSel([]); }}>Clear</button>
+          <button className="btn btn-ghost" onClick={() => { setDraft(EMPTY); setCommitted(EMPTY); setStatusSel([]); setPaid(''); }}>Clear</button>
         </div>
       </div>
 
