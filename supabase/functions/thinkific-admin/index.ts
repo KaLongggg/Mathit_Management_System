@@ -151,11 +151,14 @@ Deno.serve(async (req) => {
       const r = await thinkific(`/users/${studentId}`, "PUT", body);
       if (!r.ok) return json({ error: "Thinkific could not update the user.", status: r.status, detail: r.data }, 400);
 
-      const u = r.data;
+      // PUT /users/{id} can return an empty body on success, so fall back to
+      // the submitted values rather than assuming a response object.
+      const u = r.data || {};
+      const fn = norm(payload.first_name), ln = norm(payload.last_name);
       const row: any = {
-        first_name: u.first_name ?? norm(payload.first_name),
-        last_name: u.last_name ?? norm(payload.last_name),
-        full_name: u.full_name ?? `${norm(payload.first_name)} ${norm(payload.last_name)}`.trim(),
+        first_name: u.first_name ?? fn,
+        last_name: u.last_name ?? ln,
+        full_name: u.full_name ?? `${fn} ${ln}`.trim(),
         email: (u.email ?? norm(payload.email)).toLowerCase() || null,
         phone_number: norm(payload.phone_number) || null,
         dse_year: norm(payload.dse_year) || null,
