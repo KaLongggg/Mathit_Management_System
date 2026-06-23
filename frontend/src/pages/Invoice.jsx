@@ -108,10 +108,7 @@ export default function Invoice() {
           </tfoot>
         </table>
 
-        <div className="mt-8 rounded-xl bg-slate-50 p-4 text-xs text-slate-500 print:bg-transparent print:p-0">
-          Payment received via offline transfer. This invoice is computer-generated and serves as a receipt of the amount recorded.
-        </div>
-        <div className="mt-6 text-center text-xs text-slate-400">Thank you for learning with Mathit · mathit.hk</div>
+        <div className="mt-10 text-center text-xs text-slate-400">Thank you for learning with Mathit · mathit.hk</div>
       </div>
     </div>
   );
