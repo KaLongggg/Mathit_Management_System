@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner } from '../components/ui.jsx';
+import { Icon } from '../components/icons.jsx';
 import { fmtDate, fmtDateShort, pct } from '../lib/format.js';
 
 const DELIVERY_MODES = ['Video', 'Mong Kok', 'Tuen Mun', 'Group'];
@@ -128,8 +129,11 @@ export default function EnrolmentDetail() {
                 <textarea id="notes" className="input" rows={4} placeholder="Internal notes…" value={form.notes} onChange={(e) => setForm((x) => ({ ...x, notes: e.target.value }))} />
               </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-4 flex gap-2">
               <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? <Spinner /> : 'Save'}</button>
+              <Link to={`/invoice/${encodeURIComponent(id)}`} className="btn btn-ghost">
+                <Icon name="file" size={16} /> Invoice
+              </Link>
             </div>
           </div>
         </>

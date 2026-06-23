@@ -8,6 +8,7 @@ const NAV = [
   { to: '/students', label: 'Students', icon: 'students', match: ['/students', '/student'] },
   { to: '/enrolments', label: 'Enrolments', icon: 'enrolments', match: ['/enrolments', '/enrolment'] },
   { to: '/scheduler', label: 'Scheduler', icon: 'scheduler', match: ['/scheduler'] },
+  { to: '/shipping', label: 'Shipping', icon: 'truck', match: ['/shipping'] },
   { to: '/logs', label: 'Logs', icon: 'logs', match: ['/logs'] },
 ];
 
@@ -41,9 +42,9 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-dvh bg-paper md:grid md:grid-cols-[16rem_1fr]">
+    <div className="app-shell min-h-dvh bg-paper md:grid md:grid-cols-[16rem_1fr]">
       {/* Desktop brand rail */}
-      <aside className="sticky top-0 hidden h-dvh flex-col bg-brand-700 px-4 py-5 md:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col bg-brand-700 px-4 py-5 md:flex print:!hidden">
         <div className="px-2">
           <BrandMark />
         </div>
@@ -71,7 +72,7 @@ export default function Layout() {
       {/* Content column */}
       <div className="flex min-h-dvh flex-col">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-40 flex items-center justify-between bg-brand-700 px-4 py-3 pt-safe md:hidden">
+        <header className="sticky top-0 z-40 flex items-center justify-between bg-brand-700 px-4 py-3 pt-safe md:hidden print:!hidden">
           <BrandMark />
           <button
             onClick={signOut}
@@ -90,7 +91,7 @@ export default function Layout() {
 
       {/* Mobile bottom tab bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-7 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur md:hidden print:!hidden"
         aria-label="Primary"
       >
         {NAV.map((item) => {
@@ -99,12 +100,12 @@ export default function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              className="flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium"
+              className="flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2 text-[9.5px] font-medium"
               data-active={active}
               style={{ color: active ? '#2a6978' : '#94a3b8' }}
             >
-              <Icon name={item.icon} size={22} strokeWidth={active ? 2 : 1.6} />
-              <span>{item.label}</span>
+              <Icon name={item.icon} size={21} strokeWidth={active ? 2 : 1.6} />
+              <span className="w-full truncate text-center leading-none">{item.label}</span>
             </NavLink>
           );
         })}

@@ -16,6 +16,8 @@ import EnrolmentDetail from './pages/EnrolmentDetail.jsx';
 import Scheduler from './pages/Scheduler.jsx';
 import SchedulerDetail from './pages/SchedulerDetail.jsx';
 import Logs from './pages/Logs.jsx';
+import Shipping from './pages/Shipping.jsx';
+import Invoice from './pages/Invoice.jsx';
 
 function Splash() {
   return (
@@ -37,6 +39,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route element={<Protected />}>
+        <Route path="/invoice/:id" element={<Invoice />} />
         <Route element={<Layout />}>
           <Route
             path="/dashboard"
@@ -55,6 +58,7 @@ export default function App() {
           <Route path="/scheduler" element={<Scheduler />} />
           <Route path="/scheduler/:id" element={<SchedulerDetail />} />
           <Route path="/logs" element={<Logs />} />
+          <Route path="/shipping" element={<Shipping />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -91,6 +91,13 @@
   .pt-safe { padding-top: env(safe-area-inset-top); }
 }
 
+@media print {
+  .no-print { display: none !important; }
+  .app-shell { display: block !important; }
+  body { background: #fff; }
+  @page { margin: 14mm; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
