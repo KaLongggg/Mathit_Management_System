@@ -7,7 +7,12 @@ import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Moda
 import { Icon } from '../components/icons.jsx';
 import { MultiSelect } from '../components/MultiSelect.jsx';
 import { ENROLMENT_STATUSES } from '../lib/constants.js';
-import { fmtDateShort, fullName, pct } from '../lib/format.js';
+import { fmtDate, fmtDateShort, fullName, pct } from '../lib/format.js';
+
+function LogPill({ status }) {
+  const map = { sent: 'pill-green', failed: 'pill-coral', dry_run: 'pill-slate' };
+  return <span className={`pill ${map[status] || 'pill-slate'}`}>{status || 'unknown'}</span>;
+}
 
 function EnrolCourseForm({ studentId, onClose, onDone }) {
   const toast = useToast();
@@ -102,6 +107,8 @@ export default function StudentDetail() {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [enrols, setEnrols] = useState(null);
+  const [msgs, setMsgs] = useState(null);
+  const [schedNames, setSchedNames] = useState({});
   const [showEnrol, setShowEnrol] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [eStatusSel, setEStatusSel] = useState([]);
@@ -138,6 +145,17 @@ export default function StudentDetail() {
       else setStudent(data);
     })();
     loadEnrols();
+    supabase
+      .from('whatsapp_schedule_logs')
+      .select('*')
+      .eq('student_id', id)
+      .order('sent_at', { ascending: false })
+      .limit(50)
+      .then(({ data }) => setMsgs(data || []));
+    supabase
+      .from('whatsapp_schedules')
+      .select('id,name')
+      .then(({ data }) => setSchedNames(Object.fromEntries((data || []).map((s) => [s.id, s.name]))));
   }, [id, loadEnrols]);
 
   function startEdit() {
@@ -333,6 +351,36 @@ export default function StudentDetail() {
               ))}
             </ul>
           </>
+        )}
+      </div>
+
+      {/* Message history */}
+      <div className="mt-4 card overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
+          <h2 className="text-lg font-semibold">Message history</h2>
+          {msgs && <span className="text-sm text-slate-400">{msgs.length}{msgs.length === 50 ? '+' : ''}</span>}
+        </div>
+        {msgs === null ? (
+          <div className="p-5"><SkeletonRows rows={3} /></div>
+        ) : msgs.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-slate-500">No WhatsApp messages sent to this student yet.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {msgs.map((m) => (
+              <li key={m.id} className="px-5 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <LogPill status={m.status} />
+                    <span className="truncate text-sm text-slate-500">{schedNames[m.schedule_id] || '—'}</span>
+                  </div>
+                  <span className="shrink-0 text-xs text-slate-400">{fmtDate(m.sent_at)}</span>
+                </div>
+                <div className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-sm text-slate-700">
+                  {m.message || (m.error ? `Error: ${m.error}` : '—')}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

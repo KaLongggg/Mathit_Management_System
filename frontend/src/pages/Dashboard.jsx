@@ -17,6 +17,8 @@ const CLASS_ORDER = [...COURSE_CLASSES, 'Unclassified'];
 const fmtMonth = (m) => new Date(m).toLocaleDateString('en', { month: 'short', year: '2-digit' });
 // GA returns dates as YYYYMMDD
 const fmtGADate = (d) => `${d.slice(4, 6)}/${d.slice(6, 8)}`;
+const fmtDay = (d) => new Date(d).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+const COMPLETION_COLORS = { '0%': '#94a3b8', '1-49%': '#f59e0b', '50-99%': '#37889b', '100%': '#10b981', Unknown: '#cbd5e1' };
 
 async function count(table, build) {
   let q = supabase.from(table).select('*', { count: 'exact', head: true });
@@ -66,6 +68,9 @@ export default function Dashboard() {
   const [classMix, setClassMix] = useState([]);
   const [studentsMonth, setStudentsMonth] = useState([]);
   const [topCourses, setTopCourses] = useState([]);
+  const [dseBars, setDseBars] = useState(null);
+  const [completion, setCompletion] = useState(null);
+  const [waHealth, setWaHealth] = useState(null);
   const [ga, setGa] = useState({ loading: true });
 
   useEffect(() => {
@@ -82,7 +87,7 @@ export default function Dashboard() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const [students, courses, enrolments, act, comp, exp, pend, newStu, emc, sbm, tc] = await Promise.all([
+      const [students, courses, enrolments, act, comp, exp, pend, newStu, emc, sbm, tc, dseR, compR, waR] = await Promise.all([
         count('student'),
         count('course'),
         count('enrolments'),
@@ -94,8 +99,25 @@ export default function Dashboard() {
         supabase.rpc('enrolments_by_month_class'),
         supabase.rpc('students_by_month'),
         supabase.rpc('top_courses', { p_limit: 8 }),
+        supabase.rpc('students_by_dse', { p_limit: 12 }),
+        supabase.rpc('enrolment_completion_buckets'),
+        supabase.rpc('wa_logs_by_day'),
       ]);
       if (!active) return;
+
+      // students by DSE year
+      setDseBars((dseR.data || []).map((d) => ({ name: d.dse_year, n: Number(d.n) })));
+
+      // completion distribution (fixed order)
+      const compMap = Object.fromEntries((compR.data || []).map((d) => [d.bucket, Number(d.n)]));
+      setCompletion(['0%', '1-49%', '50-99%', '100%', 'Unknown'].filter((b) => compMap[b]).map((b) => ({ name: b, n: compMap[b] })));
+
+      // whatsapp send health (pivot day -> sent/failed/dry_run)
+      const waRows = waR.data || [];
+      const days = [...new Set(waRows.map((r) => r.day))].sort();
+      const waPivot = Object.fromEntries(days.map((d) => [d, { day: d, sent: 0, failed: 0, dry_run: 0 }]));
+      waRows.forEach((r) => { if (waPivot[r.day]) waPivot[r.day][r.status] = Number(r.n); });
+      setWaHealth(days.map((d) => waPivot[d]));
 
       setS({ students, courses, enrolments, act, comp, exp, pend, newStu });
 
@@ -245,6 +267,68 @@ export default function Dashboard() {
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend wrapperStyle={{ fontSize: 12, textTransform: 'capitalize' }} />
               </PieChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        {/* Students by DSE year */}
+        <ChartCard title="Students by DSE year" subtitle="Top cohorts">
+          {!dseBars ? (
+            <div className="skeleton h-[280px] w-full rounded-xl" />
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={dseBars} margin={{ left: -16, right: 8, top: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f6" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} interval={0} angle={-30} textAnchor="end" height={50} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="n" name="Students" fill="#37889b" radius={[6, 6, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+
+        {/* Completion distribution */}
+        <ChartCard title="Completion" subtitle="Enrolment progress distribution">
+          {!completion ? (
+            <div className="skeleton h-[280px] w-full rounded-xl" />
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={completion} margin={{ left: -16, right: 8, top: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f6" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: '#f1f5f9' }} />
+                <Bar dataKey="n" name="Enrolments" radius={[6, 6, 0, 0]} maxBarSize={56}>
+                  {completion.map((d, i) => <Cell key={i} fill={COMPLETION_COLORS[d.name] || '#37889b'} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartCard>
+      </div>
+
+      {/* WhatsApp send health */}
+      <div className="mt-4">
+        <ChartCard title="WhatsApp send health" subtitle="Sent vs failed · last 30 days">
+          {!waHealth ? (
+            <div className="skeleton h-[280px] w-full rounded-xl" />
+          ) : waHealth.length === 0 ? (
+            <p className="py-12 text-center text-sm text-slate-400">No sends in the last 30 days.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={waHealth} margin={{ left: -16, right: 8, top: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eef2f6" />
+                <XAxis dataKey="day" tickFormatter={fmtDay} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} minTickGap={20} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} labelFormatter={fmtDay} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="sent" stackId="w" name="Sent" fill="#10b981" maxBarSize={28} />
+                <Bar dataKey="failed" stackId="w" name="Failed" fill="#ff5c5c" maxBarSize={28} />
+                <Bar dataKey="dry_run" stackId="w" name="Dry run" fill="#94a3b8" maxBarSize={28} />
+              </BarChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
