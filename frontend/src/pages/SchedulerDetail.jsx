@@ -22,9 +22,15 @@ const SOURCES = [
 const DEFAULTS = {
   name: '', cron_expr: '0 10 * * *', timezone: 'Asia/Hong_Kong',
   message_template: '', pdf_path: '', image_path: '', active: false,
+  trigger: 'cron', runAt: '',
 };
 
 const recipientName = (r) => r.full_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+const pad = (n) => String(n).padStart(2, '0');
+const toLocalInput = (iso) => {
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 // Runs the read-only preview RPC whenever the query changes (debounced).
 function useRecipients(sql, debounceMs = 400) {
@@ -282,6 +288,8 @@ export default function SchedulerDetail() {
     setForm({
       name: src.name || '', cron_expr: src.cron_expr || '0 10 * * *', timezone: src.timezone || 'Asia/Hong_Kong',
       message_template: src.message_template || '', pdf_path: src.pdf_path || '', image_path: src.image_path || '', active: !!src.active,
+      trigger: src.run_at ? 'once' : 'cron',
+      runAt: src.run_at ? toLocalInput(src.run_at) : '',
     });
     setCron(parseCron(src.cron_expr || '0 10 * * *'));
     if (src.audience && src.audience.type && src.audience.type !== 'advanced') {
@@ -300,9 +308,13 @@ export default function SchedulerDetail() {
 
   async function save() {
     const sql = (effectiveSql || '').trim();
+    const isOnce = form.trigger === 'once';
+    const runDate = new Date(form.runAt);
+    const runAtIso = isOnce && form.runAt && !isNaN(runDate.getTime()) ? runDate.toISOString() : null;
     const payload = {
       name: form.name.trim(),
       cron_expr: serializeCron(cron),
+      run_at: runAtIso,
       timezone: form.timezone.trim() || 'Asia/Hong_Kong',
       sql_query: sql,
       audience: audience.type === 'advanced' ? { type: 'advanced' } : audience,
@@ -315,7 +327,8 @@ export default function SchedulerDetail() {
     if (!payload.name) errs.push('Name is required.');
     if (!sql) errs.push('Pick an audience (no recipients defined yet).');
     if (!payload.message_template) errs.push('Message template is required.');
-    if (payload.cron_expr.trim().split(/\s+/).length !== 5) errs.push('Cron expression must have 5 fields.');
+    if (isOnce && !runAtIso) errs.push('Pick a date & time to send.');
+    if (!isOnce && payload.cron_expr.trim().split(/\s+/).length !== 5) errs.push('Cron expression must have 5 fields.');
     if (errs.length) return toast(errs[0], 'error');
 
     setSaving(true);
@@ -375,9 +388,26 @@ export default function SchedulerDetail() {
           </div>
 
           <div>
-            <div className="label">Cron schedule</div>
-            <CronBuilder state={cron} onChange={setCronField} />
-            <div className="mt-2 text-xs text-slate-500">Preview: <code className="font-mono text-slate-700">{cronPreview}</code></div>
+            <div className="label">When to send</div>
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" className={`btn btn-sm ${form.trigger === 'cron' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setForm((x) => ({ ...x, trigger: 'cron' }))}>Recurring</button>
+              <button type="button" className={`btn btn-sm ${form.trigger === 'once' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setForm((x) => ({ ...x, trigger: 'once' }))}>One-time</button>
+            </div>
+            {form.trigger === 'cron' ? (
+              <div className="mt-3">
+                <CronBuilder state={cron} onChange={setCronField} />
+                <div className="mt-2 text-xs text-slate-500">Preview: <code className="font-mono text-slate-700">{cronPreview}</code></div>
+              </div>
+            ) : (
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <div>
+                  <label className="label" htmlFor="s-runat">Send at</label>
+                  <input id="s-runat" type="datetime-local" className="input" value={form.runAt} onChange={(e) => setForm((x) => ({ ...x, runAt: e.target.value }))} />
+                </div>
+                <button type="button" className="btn btn-ghost" onClick={() => setForm((x) => ({ ...x, runAt: toLocalInput(new Date().toISOString()) }))}>Now</button>
+                <p className="w-full text-xs text-slate-400">Uses your device's timezone. Sends once, then the schedule disables itself. (“Now” fires within ~1 minute.)</p>
+              </div>
+            )}
           </div>
 
           <div>
@@ -434,7 +464,9 @@ export default function SchedulerDetail() {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="card p-5 sm:p-6">
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Cron"><span className="font-mono text-[13px]">{r.cron_expr}</span></Field>
+            {r.run_at
+              ? <Field label="One-time send">{fmtDate(r.run_at)}</Field>
+              : <Field label="Cron"><span className="font-mono text-[13px]">{r.cron_expr}</span></Field>}
             <Field label="Timezone">{r.timezone}</Field>
             <Field label="Active">{r.active ? 'Yes' : 'No'}</Field>
             <Field label="Created">{fmtDate(r.created_at)}</Field>

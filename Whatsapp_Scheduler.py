@@ -2,6 +2,7 @@ import os, time, hashlib, requests, psycopg2, json, re
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 import pytz, pystache
 import random
 
@@ -52,7 +53,7 @@ jobs_index = {}
 def fetch_active_rules():
     sql = """
       SELECT id, name, cron_expr, COALESCE(timezone,'Asia/Hong_Kong') AS timezone,
-             sql_query, message_template, image_path, pdf_path, active
+             sql_query, message_template, image_path, pdf_path, active, run_at
       FROM whatsapp_schedules
       WHERE active = true;
     """
@@ -82,8 +83,9 @@ def rule_signature(r: dict) -> str:
         "message_template",
         "image_path",
         "pdf_path",
+        "run_at",
     ):
-        v = (r.get(k) or "").encode("utf-8")
+        v = str(r.get(k) or "").encode("utf-8")
         h.update(v)
         h.update(b"|")
     return h.hexdigest()
@@ -179,6 +181,15 @@ def run_rule(r: dict):
 
     print(f"🎯 Done. Sent={sent}, Skipped(no phone)={skipped}, TotalRows={len(rows)}")
 
+    # One-time schedules disable themselves after running so they don't re-fire.
+    if r.get("run_at"):
+        try:
+            with get_conn() as conn, conn.cursor() as cur:
+                cur.execute("UPDATE whatsapp_schedules SET active = false WHERE id = %s", (r["id"],))
+            print(f"✅ One-time rule '{r['name']}' completed; disabled.")
+        except Exception as e:
+            print(f"⚠️ Failed to disable one-time rule {r['id']}: {e}")
+
 
 def resync():
     rules = fetch_active_rules()
@@ -197,10 +208,18 @@ def resync():
             pass
 
         tz = pytz.timezone(r["timezone"] or "Asia/Hong_Kong")
-        trigger = CronTrigger.from_crontab(r["cron_expr"], timezone=tz)
-        scheduler.add_job(run_rule, trigger, args=[r], id=job_id, replace_existing=True)
+        if r.get("run_at"):
+            # One-time: fire once at the stored instant (timestamptz is tz-aware).
+            scheduler.add_job(
+                run_rule, DateTrigger(run_date=r["run_at"]),
+                args=[r], id=job_id, replace_existing=True, misfire_grace_time=3600,
+            )
+            print(f"📌 Scheduled (one-time) {r['name']} @ {r['run_at']}")
+        else:
+            trigger = CronTrigger.from_crontab(r["cron_expr"], timezone=tz)
+            scheduler.add_job(run_rule, trigger, args=[r], id=job_id, replace_existing=True)
+            print(f"📌 Scheduled {r['name']} @ {r['cron_expr']} ({r['timezone']})")
         jobs_index[r["id"]] = {"sig": sig}
-        print(f"📌 Scheduled {r['name']} @ {r['cron_expr']} ({r['timezone']})")
 
     for rid in list(jobs_index.keys()):
         if rid not in seen:
