@@ -9,24 +9,9 @@ import {
 import { MultiSelect } from '../components/MultiSelect.jsx';
 import { Icon } from '../components/icons.jsx';
 import { downloadCsv } from '../lib/csv.js';
+import { buildAudienceSql } from '../lib/audience.js';
 import { COURSE_CLASSES, ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
-
-// Build a recipients SQL query (used as a scheduler distribution list).
-function buildRosterSql(courseId, { statuses, dseYears, levels }) {
-  const qv = (v) => `'${String(v).replace(/'/g, "''")}'`;
-  let sql =
-    `SELECT s.student_id, s.first_name, s.last_name, s.full_name, s.phone_number,\n` +
-    `       s.dse_year, s.dse_aim, s.current_level\n` +
-    `FROM student s\n` +
-    `JOIN enrolments e ON e.student_id = s.student_id\n` +
-    `WHERE e.course_id = ${qv(courseId)}\n` +
-    `  AND s.phone_number IS NOT NULL AND s.phone_number <> ''`;
-  if (statuses.length) sql += `\n  AND e.status IN (${statuses.map(qv).join(', ')})`;
-  if (dseYears.length) sql += `\n  AND s.dse_year IN (${dseYears.map(qv).join(', ')})`;
-  if (levels.length) sql += `\n  AND s.current_level IN (${levels.map(qv).join(', ')})`;
-  return sql;
-}
 
 function CourseRoster({ courseId, courseName }) {
   const navigate = useNavigate();
@@ -85,7 +70,11 @@ function CourseRoster({ courseId, courseName }) {
 
   async function createScheduler() {
     setCreating(true);
-    const sql = buildRosterSql(courseId, { statuses: statusSel, dseYears: dseSel, levels: levelSel });
+    const cfg = {
+      type: 'course', courseId: String(courseId), courseName: courseName || '',
+      statuses: statusSel, dseYears: dseSel, levels: levelSel, campaigns: [], phonesText: '',
+    };
+    const sql = buildAudienceSql(cfg);
     const bits = [];
     if (statusSel.length) bits.push(statusSel.join('/'));
     if (dseSel.length) bits.push(`DSE ${dseSel.join('/')}`);
@@ -93,7 +82,7 @@ function CourseRoster({ courseId, courseName }) {
     const schedName = `${courseName || 'Course'} — ${bits.join(', ') || 'all enrolled'}`.slice(0, 120);
     const { data, error } = await supabase
       .from('whatsapp_schedules')
-      .insert({ name: schedName, cron_expr: '0 10 * * *', timezone: 'Asia/Hong_Kong', sql_query: sql, message_template: '', active: false })
+      .insert({ name: schedName, cron_expr: '0 10 * * *', timezone: 'Asia/Hong_Kong', sql_query: sql, audience: cfg, message_template: '', active: false })
       .select('id')
       .single();
     setCreating(false);
