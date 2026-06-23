@@ -112,6 +112,28 @@ const PATHS = {
   ),
   chevronDown: <path d="M6 9l6 6 6-6" />,
   x: <path d="M6 6l12 12M18 6L6 18" />,
+  download: (
+    <>
+      <path d="M12 3v12" />
+      <path d="m7 11 5 5 5-5" />
+      <path d="M5 21h14" />
+    </>
+  ),
+  print: (
+    <>
+      <path d="M6 9V3h12v6" />
+      <rect x="5" y="9" width="14" height="8" rx="1.5" />
+      <path d="M7 17h10v4H7z" />
+    </>
+  ),
+  truck: (
+    <>
+      <path d="M3 6h11v9H3z" />
+      <path d="M14 9h4l3 3v3h-7z" />
+      <circle cx="7" cy="18" r="1.6" />
+      <circle cx="17" cy="18" r="1.6" />
+    </>
+  ),
   userPlus: (
     <>
       <circle cx="9" cy="8" r="3.2" />

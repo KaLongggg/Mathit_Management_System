@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
-import { PageHeader, SearchInput, EmptyState, ErrorBanner, SkeletonRows, StatusPill, useSort, SortHeader } from '../components/ui.jsx';
+import { PageHeader, SearchInput, EmptyState, ErrorBanner, SkeletonRows, StatusPill, Spinner, useSort, SortHeader } from '../components/ui.jsx';
 import { MultiSelect } from '../components/MultiSelect.jsx';
+import { useToast } from '../components/Toast.jsx';
+import { Icon } from '../components/icons.jsx';
+import { downloadCsv, fetchAll } from '../lib/csv.js';
 import { ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, pct } from '../lib/format.js';
 
@@ -22,17 +25,15 @@ export default function Enrolments() {
   const [sort, toggleSort] = useSort('enrolled_at', 'desc');
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
+  const [sel, setSel] = useState(() => new Set());
   const navigate = useNavigate();
+  const toast = useToast();
 
-  const load = useCallback(async () => {
-    setRows(null);
-    setError('');
+  const [exporting, setExporting] = useState(false);
+
+  const buildQuery = useCallback((selectStr) => {
     const { term, dse, from, to } = committed;
-    let q = supabase
-      .from('enrolments')
-      .select('id, student_id, course_id, course_name, user_name, status, is_paid, percentage_completed, enrolled_at, student:student_id!inner(dse_year)')
-      .order(sort.key, { ascending: sort.dir === 'asc' })
-      .limit(200);
+    let q = supabase.from('enrolments').select(selectStr).order(sort.key, { ascending: sort.dir === 'asc' });
     if (term.trim()) {
       const s = term.trim().replace(/[,()]/g, '\\$&');
       q = q.or([`id.ilike.%${s}%`, `student_id.ilike.%${s}%`, `course_id.ilike.%${s}%`, `user_name.ilike.%${s}%`].join(','));
@@ -44,13 +45,58 @@ export default function Enrolments() {
     if (dse.trim()) q = q.eq('student.dse_year', dse.trim());
     if (from) q = q.gte('enrolled_at', from);
     if (to) q = q.lte('enrolled_at', to);
-
-    const { data, error } = await q;
-    if (error) { setError(error.message); setRows([]); return; }
-    setRows(data || []);
+    return q;
   }, [committed, statusSel, paid, sort]);
 
+  const load = useCallback(async () => {
+    setRows(null);
+    setError('');
+    setSel(new Set());
+    const { data, error } = await buildQuery(
+      'id, student_id, course_id, course_name, user_name, status, is_paid, percentage_completed, enrolled_at, student:student_id!inner(dse_year)',
+    ).limit(200);
+    if (error) { setError(error.message); setRows([]); return; }
+    setRows(data || []);
+  }, [buildQuery]);
+
   useEffect(() => { load(); }, [load]);
+
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const all = await fetchAll(() => buildQuery(
+        'id, student_id, user_name, user_email, course_id, course_name, status, is_paid, paid_amount, percentage_completed, enrolled_at, student:student_id!inner(phone_number, dse_year)',
+      ));
+      downloadCsv(`enrolments-${new Date().toISOString().slice(0, 10)}.csv`, [
+        { label: 'Enrolment ID', key: 'id' },
+        { label: 'Student', get: (r) => r.user_name },
+        { label: 'Email', get: (r) => r.user_email },
+        { label: 'Phone', get: (r) => r.student?.phone_number },
+        { label: 'DSE Year', get: (r) => r.student?.dse_year },
+        { label: 'Course', get: (r) => r.course_name },
+        { label: 'Course ID', key: 'course_id' },
+        { label: 'Status', key: 'status' },
+        { label: 'Paid', get: (r) => (r.is_paid == null ? '' : r.is_paid ? 'Yes' : 'No') },
+        { label: 'Paid Amount', key: 'paid_amount' },
+        { label: 'Completion', get: (r) => (r.percentage_completed == null ? '' : `${Math.round(r.percentage_completed * 100)}%`) },
+        { label: 'Enrolled', key: 'enrolled_at' },
+      ], all);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function bulkPaid(value) {
+    const ids = [...sel];
+    if (!ids.length) return;
+    const { error } = await supabase.from('enrolments').update({ is_paid: value }).in('id', ids);
+    if (error) return toast(error.message, 'error');
+    setRows((rs) => (rs ? rs.map((r) => (sel.has(r.id) ? { ...r, is_paid: value } : r)) : rs));
+    setSel(new Set());
+    toast(`Marked ${ids.length} ${value ? 'paid' : 'unpaid'}.`, 'success');
+  }
 
   const apply = () => setCommitted(draft);
   const onEnter = (e) => e.key === 'Enter' && apply();
@@ -58,7 +104,15 @@ export default function Enrolments() {
 
   return (
     <>
-      <PageHeader title="Enrolments" subtitle="Synced from Thinkific." />
+      <PageHeader
+        title="Enrolments"
+        subtitle="Synced from Thinkific."
+        actions={
+          <button className="btn btn-ghost" onClick={exportCsv} disabled={exporting}>
+            {exporting ? <Spinner /> : <><Icon name="download" size={16} /> Export CSV</>}
+          </button>
+        }
+      />
 
       <div className="card mb-4 p-4 sm:p-5">
         <div className="grid gap-3 lg:grid-cols-6">
@@ -92,11 +146,29 @@ export default function Enrolments() {
         <EmptyState icon="enrolments" title="No enrolments found" hint="Try different filters." />
       ) : (
         <>
-          <div className="mb-2 text-sm text-slate-400">Showing {rows.length}{rows.length === 200 ? '+ (refine to narrow)' : ''}</div>
+          {sel.size > 0 ? (
+            <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm">
+              <span className="font-medium text-brand-800">{sel.size} selected</span>
+              <button className="btn btn-sm btn-primary" onClick={() => bulkPaid(true)}>Mark paid</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => bulkPaid(false)}>Mark unpaid</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => setSel(new Set())}>Clear</button>
+            </div>
+          ) : (
+            <div className="mb-2 text-sm text-slate-400">Showing {rows.length}{rows.length === 200 ? '+ (refine to narrow)' : ''}</div>
+          )}
           <div className="card overflow-hidden">
             <table className="hidden w-full md:table">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <th className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded accent-brand-600"
+                      checked={rows.length > 0 && sel.size === rows.length}
+                      onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
+                      aria-label="Select all"
+                    />
+                  </th>
                   <SortHeader label="Student" sortKey="user_name" sort={sort} onToggle={toggleSort} />
                   <SortHeader label="Course" sortKey="course_name" sort={sort} onToggle={toggleSort} />
                   <SortHeader label="Status" sortKey="status" sort={sort} onToggle={toggleSort} />
@@ -112,6 +184,15 @@ export default function Enrolments() {
                     onClick={() => navigate(`/enrolment/${encodeURIComponent(r.id)}`)}
                     className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-brand-50/60"
                   >
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded accent-brand-600"
+                        checked={sel.has(r.id)}
+                        onChange={() => setSel((prev) => { const n = new Set(prev); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
+                        aria-label="Select row"
+                      />
+                    </td>
                     <td className="px-5 py-3 font-medium text-slate-800">{r.user_name || r.student_id}</td>
                     <td className="px-5 py-3 text-slate-600">{r.course_name || r.course_id}</td>
                     <td className="px-5 py-3"><StatusPill status={r.status} /></td>

@@ -8,6 +8,7 @@ import {
 } from '../components/ui.jsx';
 import { MultiSelect } from '../components/MultiSelect.jsx';
 import { Icon } from '../components/icons.jsx';
+import { downloadCsv } from '../lib/csv.js';
 import { COURSE_CLASSES, ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
 
@@ -69,6 +70,19 @@ function CourseRoster({ courseId, courseName }) {
   });
   const withPhone = filtered.filter((r) => r.student?.phone_number).length;
 
+  function exportCsv() {
+    downloadCsv(`roster-${courseId}-${new Date().toISOString().slice(0, 10)}.csv`, [
+      { label: 'Student', get: (r) => name(r) },
+      { label: 'Email', get: (r) => r.user_email },
+      { label: 'Phone', get: (r) => r.student?.phone_number },
+      { label: 'DSE Year', get: (r) => r.student?.dse_year },
+      { label: 'Current Level', get: (r) => r.student?.current_level },
+      { label: 'Status', key: 'status' },
+      { label: 'Completion', get: (r) => (r.percentage_completed == null ? '' : `${Math.round(r.percentage_completed * 100)}%`) },
+      { label: 'Enrolled', key: 'enrolled_at' },
+    ], filtered);
+  }
+
   async function createScheduler() {
     setCreating(true);
     const sql = buildRosterSql(courseId, { statuses: statusSel, dseYears: dseSel, levels: levelSel });
@@ -96,9 +110,14 @@ function CourseRoster({ courseId, courseName }) {
             <h2 className="text-lg font-semibold">Enrolled students</h2>
             {all && <span className="text-sm text-slate-400">{filtered.length}{filtered.length !== all.length ? ` / ${all.length}` : ''}</span>}
           </div>
-          <button className="btn btn-sm btn-primary shrink-0" onClick={createScheduler} disabled={creating || withPhone === 0} title={withPhone === 0 ? 'No recipients with a WhatsApp number' : ''}>
-            {creating ? <Spinner size={14} /> : <><Icon name="scheduler" size={15} /> Create scheduler</>}
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button className="btn btn-sm btn-ghost" onClick={exportCsv} disabled={!all || filtered.length === 0}>
+              <Icon name="download" size={15} /> CSV
+            </button>
+            <button className="btn btn-sm btn-primary" onClick={createScheduler} disabled={creating || withPhone === 0} title={withPhone === 0 ? 'No recipients with a WhatsApp number' : ''}>
+              {creating ? <Spinner size={14} /> : <><Icon name="scheduler" size={15} /> Create scheduler</>}
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

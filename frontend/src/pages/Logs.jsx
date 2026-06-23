@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { PageHeader, EmptyState, ErrorBanner, Spinner } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
+import { downloadCsv, fetchAll } from '../lib/csv.js';
 import { fmtDate } from '../lib/format.js';
 
 const PAGE = 30;
@@ -33,11 +34,32 @@ export default function Logs() {
   const [error, setError] = useState('');
   const [openId, setOpenId] = useState(null);
 
+  const [exporting, setExporting] = useState(false);
   const filtersRef = useRef(EMPTY);
   const offsetRef = useRef(0);
   const loadingRef = useRef(false);
   const doneRef = useRef(false);
   const sentinelRef = useRef(null);
+
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const all = await fetchAll(() => buildQuery(filtersRef.current));
+      downloadCsv(`whatsapp-logs-${new Date().toISOString().slice(0, 10)}.csv`, [
+        { label: 'Sent at', key: 'sent_at' },
+        { label: 'Schedule', get: (r) => schedules[r.schedule_id] || '' },
+        { label: 'Recipient', key: 'whatsapp_number' },
+        { label: 'Status', key: 'status' },
+        { label: 'Message', key: 'message' },
+        { label: 'Error', key: 'error' },
+        { label: 'Student ID', key: 'student_id' },
+      ], all);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => {
     supabase
@@ -100,7 +122,15 @@ export default function Logs() {
 
   return (
     <>
-      <PageHeader title="Message log" subtitle="WhatsApp send history from the scheduler." />
+      <PageHeader
+        title="Message log"
+        subtitle="WhatsApp send history from the scheduler."
+        actions={
+          <button className="btn btn-ghost" onClick={exportCsv} disabled={exporting}>
+            {exporting ? <Spinner /> : <><Icon name="download" size={16} /> Export CSV</>}
+          </button>
+        }
+      />
 
       <div className="card p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-3">

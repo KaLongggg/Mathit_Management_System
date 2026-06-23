@@ -5,6 +5,7 @@ import { createStudent } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, EmptyState, ErrorBanner, Spinner, Modal } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
+import { downloadCsv, fetchAll } from '../lib/csv.js';
 import { fullName } from '../lib/format.js';
 
 const PAGE = 30;
@@ -102,6 +103,7 @@ export default function Students() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const filtersRef = useRef(EMPTY);
   const offsetRef = useRef(0);
@@ -157,15 +159,43 @@ export default function Students() {
   const set = (k) => (e) => setDraft((x) => ({ ...x, [k]: e.target.value }));
   const onEnter = (e) => e.key === 'Enter' && applyFilters(draft);
 
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const all = await fetchAll(() => buildQuery(filtersRef.current));
+      downloadCsv(`students-${new Date().toISOString().slice(0, 10)}.csv`, [
+        { label: 'Student ID', key: 'student_id' },
+        { label: 'First name', key: 'first_name' },
+        { label: 'Last name', key: 'last_name' },
+        { label: 'Email', key: 'email' },
+        { label: 'Phone', key: 'phone_number' },
+        { label: 'DSE Year', key: 'dse_year' },
+        { label: 'DSE Aim', key: 'dse_aim' },
+        { label: 'Current Level', key: 'current_level' },
+        { label: 'Shipping Address', key: 'postal_address' },
+        { label: 'Created', key: 'created_at' },
+      ], all);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Students"
         subtitle="Filter, then scroll to load more."
         actions={
-          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-            <Icon name="userPlus" size={16} /> Add student
-          </button>
+          <>
+            <button className="btn btn-ghost" onClick={exportCsv} disabled={exporting}>
+              {exporting ? <Spinner /> : <><Icon name="download" size={16} /> Export CSV</>}
+            </button>
+            <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+              <Icon name="userPlus" size={16} /> Add student
+            </button>
+          </>
         }
       />
 
