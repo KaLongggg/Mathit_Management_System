@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
-import { PageHeader, SearchInput, EmptyState, ErrorBanner, SkeletonRows, StatusPill, Spinner, useSort, SortHeader } from '../components/ui.jsx';
+import { PageHeader, SearchInput, EmptyState, ErrorBanner, StatusPill, Spinner, useSort, SortHeader } from '../components/ui.jsx';
 import { MultiSelect } from '../components/MultiSelect.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { Icon } from '../components/icons.jsx';
@@ -9,7 +9,10 @@ import { downloadCsv, fetchAll } from '../lib/csv.js';
 import { ENROLMENT_STATUSES } from '../lib/constants.js';
 import { fmtDateShort, pct } from '../lib/format.js';
 
+const PAGE = 40;
 const EMPTY = { term: '', dse: '', from: '', to: '' };
+const ID_SEL = 'id, student:student_id!inner(dse_year)';
+const LOAD_COLS = 'id, student_id, course_id, course_name, user_name, status, is_paid, percentage_completed, enrolled_at, student:student_id!inner(dse_year)';
 
 function PaidBadge({ value }) {
   if (value === true) return <span className="pill pill-green">Paid</span>;
@@ -23,17 +26,28 @@ export default function Enrolments() {
   const [statusSel, setStatusSel] = useState([]);
   const [paid, setPaid] = useState('');
   const [sort, toggleSort] = useSort('enrolled_at', 'desc');
-  const [rows, setRows] = useState(null);
+
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+
   const [sel, setSel] = useState(() => new Set());
+  const [allMatching, setAllMatching] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const navigate = useNavigate();
   const toast = useToast();
+  const offsetRef = useRef(0);
+  const loadingRef = useRef(false);
+  const doneRef = useRef(false);
+  const sentinelRef = useRef(null);
 
-  const [exporting, setExporting] = useState(false);
-
-  const buildQuery = useCallback((selectStr) => {
+  const buildQuery = useCallback((selectStr, opts) => {
     const { term, dse, from, to } = committed;
-    let q = supabase.from('enrolments').select(selectStr).order(sort.key, { ascending: sort.dir === 'asc' });
+    let q = supabase.from('enrolments').select(selectStr, opts).order(sort.key, { ascending: sort.dir === 'asc' });
     if (term.trim()) {
       const s = term.trim().replace(/[,()]/g, '\\$&');
       q = q.or([`id.ilike.%${s}%`, `student_id.ilike.%${s}%`, `course_id.ilike.%${s}%`, `user_name.ilike.%${s}%`].join(','));
@@ -48,18 +62,53 @@ export default function Enrolments() {
     return q;
   }, [committed, statusSel, paid, sort]);
 
-  const load = useCallback(async () => {
-    setRows(null);
-    setError('');
-    setSel(new Set());
-    const { data, error } = await buildQuery(
-      'id, student_id, course_id, course_name, user_name, status, is_paid, percentage_completed, enrolled_at, student:student_id!inner(dse_year)',
-    ).limit(200);
-    if (error) { setError(error.message); setRows([]); return; }
-    setRows(data || []);
+  const loadMore = useCallback(async () => {
+    if (loadingRef.current || doneRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    const from = offsetRef.current;
+    const { data, error } = await buildQuery(LOAD_COLS).range(from, from + PAGE - 1);
+    if (error) {
+      setError(error.message);
+      doneRef.current = true;
+      setDone(true);
+    } else {
+      const batch = data || [];
+      setRows((prev) => [...prev, ...batch]);
+      offsetRef.current += batch.length;
+      if (batch.length < PAGE) { doneRef.current = true; setDone(true); }
+    }
+    loadingRef.current = false;
+    setLoading(false);
   }, [buildQuery]);
 
-  useEffect(() => { load(); }, [load]);
+  // reset + reload whenever filters/sort change
+  useEffect(() => {
+    offsetRef.current = 0;
+    doneRef.current = false;
+    loadingRef.current = false;
+    setRows([]);
+    setDone(false);
+    setError('');
+    setSel(new Set());
+    setAllMatching(false);
+    setTotal(null);
+    loadMore();
+    buildQuery(ID_SEL, { count: 'exact', head: true }).then(({ count }) => setTotal(count ?? null));
+  }, [buildQuery]); // eslint-disable-line
+
+  // infinite scroll
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver((e) => e[0].isIntersecting && loadMore(), { rootMargin: '300px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore]);
+
+  const apply = () => setCommitted(draft);
+  const onEnter = (e) => e.key === 'Enter' && apply();
+  const set = (k) => (e) => setDraft((x) => ({ ...x, [k]: e.target.value }));
 
   async function exportCsv() {
     setExporting(true);
@@ -89,18 +138,40 @@ export default function Enrolments() {
   }
 
   async function bulkPaid(value) {
-    const ids = [...sel];
-    if (!ids.length) return;
-    const { error } = await supabase.from('enrolments').update({ is_paid: value }).in('id', ids);
-    if (error) return toast(error.message, 'error');
-    setRows((rs) => (rs ? rs.map((r) => (sel.has(r.id) ? { ...r, is_paid: value } : r)) : rs));
-    setSel(new Set());
-    toast(`Marked ${ids.length} ${value ? 'paid' : 'unpaid'}.`, 'success');
+    setBulkBusy(true);
+    try {
+      if (allMatching) {
+        if (!window.confirm(`Mark ALL ${total} matching enrolments ${value ? 'paid' : 'unpaid'}?`)) {
+          setBulkBusy(false);
+          return;
+        }
+        const idRows = await fetchAll(() => buildQuery(ID_SEL));
+        const ids = idRows.map((r) => r.id);
+        for (let i = 0; i < ids.length; i += 500) {
+          const { error } = await supabase.from('enrolments').update({ is_paid: value }).in('id', ids.slice(i, i + 500));
+          if (error) throw new Error(error.message);
+        }
+        setRows((rs) => rs.map((r) => ({ ...r, is_paid: value })));
+        toast(`Marked ${ids.length} ${value ? 'paid' : 'unpaid'}.`, 'success');
+      } else {
+        const ids = [...sel];
+        if (!ids.length) return;
+        const { error } = await supabase.from('enrolments').update({ is_paid: value }).in('id', ids);
+        if (error) throw new Error(error.message);
+        setRows((rs) => rs.map((r) => (sel.has(r.id) ? { ...r, is_paid: value } : r)));
+        toast(`Marked ${ids.length} ${value ? 'paid' : 'unpaid'}.`, 'success');
+      }
+      setSel(new Set());
+      setAllMatching(false);
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
-  const apply = () => setCommitted(draft);
-  const onEnter = (e) => e.key === 'Enter' && apply();
-  const set = (k) => (e) => setDraft((x) => ({ ...x, [k]: e.target.value }));
+  const allLoadedSelected = rows.length > 0 && sel.size === rows.length;
+  const selectionCount = allMatching ? total : sel.size;
 
   return (
     <>
@@ -140,22 +211,26 @@ export default function Enrolments() {
 
       <ErrorBanner message={error} />
 
-      {rows === null ? (
-        <SkeletonRows />
-      ) : rows.length === 0 ? (
+      {rows.length === 0 && !loading ? (
         <EmptyState icon="enrolments" title="No enrolments found" hint="Try different filters." />
       ) : (
         <>
-          {sel.size > 0 ? (
+          {selectionCount > 0 ? (
             <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm">
-              <span className="font-medium text-brand-800">{sel.size} selected</span>
-              <button className="btn btn-sm btn-primary" onClick={() => bulkPaid(true)}>Mark paid</button>
-              <button className="btn btn-sm btn-ghost" onClick={() => bulkPaid(false)}>Mark unpaid</button>
-              <button className="btn btn-sm btn-ghost" onClick={() => setSel(new Set())}>Clear</button>
+              <span className="font-medium text-brand-800">{selectionCount} selected</span>
+              {!allMatching && allLoadedSelected && total > rows.length && (
+                <button className="font-medium text-brand-700 underline" onClick={() => setAllMatching(true)}>
+                  Select all {total} matching
+                </button>
+              )}
+              <button className="btn btn-sm btn-primary" onClick={() => bulkPaid(true)} disabled={bulkBusy}>{bulkBusy ? <Spinner size={14} /> : 'Mark paid'}</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => bulkPaid(false)} disabled={bulkBusy}>Mark unpaid</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => { setSel(new Set()); setAllMatching(false); }}>Clear</button>
             </div>
           ) : (
-            <div className="mb-2 text-sm text-slate-400">Showing {rows.length}{rows.length === 200 ? '+ (refine to narrow)' : ''}</div>
+            <div className="mb-2 text-sm text-slate-400">Showing {rows.length}{total != null ? ` of ${total}` : ''}</div>
           )}
+
           <div className="card overflow-hidden">
             <table className="hidden w-full md:table">
               <thead>
@@ -164,9 +239,12 @@ export default function Enrolments() {
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded accent-brand-600"
-                      checked={rows.length > 0 && sel.size === rows.length}
-                      onChange={(e) => setSel(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
-                      aria-label="Select all"
+                      checked={allMatching || allLoadedSelected}
+                      onChange={(e) => {
+                        if (e.target.checked) setSel(new Set(rows.map((r) => r.id)));
+                        else { setSel(new Set()); setAllMatching(false); }
+                      }}
+                      aria-label="Select all on screen"
                     />
                   </th>
                   <SortHeader label="Student" sortKey="user_name" sort={sort} onToggle={toggleSort} />
@@ -188,8 +266,8 @@ export default function Enrolments() {
                       <input
                         type="checkbox"
                         className="h-4 w-4 rounded accent-brand-600"
-                        checked={sel.has(r.id)}
-                        onChange={() => setSel((prev) => { const n = new Set(prev); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; })}
+                        checked={allMatching || sel.has(r.id)}
+                        onChange={() => { setAllMatching(false); setSel((prev) => { const n = new Set(prev); n.has(r.id) ? n.delete(r.id) : n.add(r.id); return n; }); }}
                         aria-label="Select row"
                       />
                     </td>
@@ -221,6 +299,11 @@ export default function Enrolments() {
                 </li>
               ))}
             </ul>
+          </div>
+
+          <div ref={sentinelRef} className="flex items-center justify-center py-6 text-sm text-slate-400">
+            {loading ? <span className="flex items-center gap-2"><Spinner size={16} /> Loading…</span>
+              : done ? `All ${rows.length} loaded` : 'Scroll to load more'}
           </div>
         </>
       )}
