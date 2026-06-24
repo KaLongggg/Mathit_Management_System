@@ -1,0 +1,6 @@
+apscheduler
+requests
+python-dotenv
+pytz
+pystache
+psycopg2-binary

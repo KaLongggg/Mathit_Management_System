@@ -1,0 +1,14 @@
+# Secrets / local-only — never commit
+.env
+.env copy
+
+# Runtime state: WhatsApp session + Chrome profile (100M+, machine-specific)
+data/
+chrome-data/
+*/chrome-data/
+
+# Node
+node_modules/
+
+# Logs
+*.log

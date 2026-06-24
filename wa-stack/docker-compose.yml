@@ -1,0 +1,38 @@
+services:
+  bot:
+    build: ./bot
+    container_name: whatsapp_bot
+    env_file: .env
+    restart: always
+
+    shm_size: "1gb" 
+
+    volumes:
+      - ./assets:/app/assets
+      - ./data/wwebjs:/app/.wwebjs_auth
+      - ./data/chrome:/app/chrome-data
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/healthz"]
+      interval: 20s
+      timeout: 3s
+      retries: 10
+      start_period: 60s
+
+  scheduler:
+    build: ./scheduler
+    container_name: whatsapp_scheduler
+    env_file: .env
+    restart: always
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
