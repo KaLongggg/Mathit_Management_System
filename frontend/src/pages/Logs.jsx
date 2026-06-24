@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { PageHeader, EmptyState, ErrorBanner, Spinner } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
+import { useToast } from '../components/Toast.jsx';
 import { downloadCsv, fetchAll } from '../lib/csv.js';
 import { fmtDate } from '../lib/format.js';
 
@@ -33,6 +34,8 @@ export default function Logs() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
   const [openId, setOpenId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const toast = useToast();
 
   const [exporting, setExporting] = useState(false);
   const filtersRef = useRef(EMPTY);
@@ -100,6 +103,18 @@ export default function Logs() {
     setDone(false);
     setOpenId(null);
     loadMore();
+  }
+
+  async function removeLog(id) {
+    if (!window.confirm('Delete this log entry? This cannot be undone.')) return;
+    setDeletingId(id);
+    const { error } = await supabase.from('whatsapp_schedule_logs').delete().eq('id', id);
+    setDeletingId(null);
+    if (error) return toast(error.message, 'error');
+    setRows((prev) => prev.filter((x) => x.id !== id));
+    offsetRef.current = Math.max(0, offsetRef.current - 1);
+    if (openId === id) setOpenId(null);
+    toast('Log entry deleted.', 'success');
   }
 
   useEffect(() => {
@@ -203,9 +218,16 @@ export default function Logs() {
                             <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-coral-50 p-3 text-coral-700 ring-1 ring-coral-100">{r.error}</pre>
                           </div>
                         )}
-                        <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-500">
                           {r.student_id && <span><span className="text-slate-400">Student:</span> {r.student_id}</span>}
                           <span><span className="text-slate-400">Log ID:</span> {r.id}</span>
+                          <button
+                            className="btn btn-sm btn-danger-ghost ml-auto"
+                            onClick={() => removeLog(r.id)}
+                            disabled={deletingId === r.id}
+                          >
+                            {deletingId === r.id ? <Spinner size={14} /> : <><Icon name="trash" size={14} /> Delete log</>}
+                          </button>
                         </div>
                       </div>
                     )}
