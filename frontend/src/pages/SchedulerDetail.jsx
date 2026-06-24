@@ -51,48 +51,73 @@ function useRecipients(sql, debounceMs = 400) {
   return state;
 }
 
-function RecipientsTable({ rows }) {
-  const noPhone = rows.filter((r) => !r.phone_number).length;
-  return (
-    <>
-      {noPhone > 0 && <div className="mb-2 text-xs text-amber-600">{noPhone} row(s) have no phone number and will be skipped when sending.</div>}
-      <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-400">
-              <th className="px-3 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Phone</th>
-              <th className="px-3 py-2 font-medium">DSE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-b border-slate-100 last:border-0">
-                <td className="px-3 py-1.5">{recipientName(r)}</td>
-                <td className="px-3 py-1.5 font-mono text-[13px]">{r.phone_number || <span className="text-amber-600">missing</span>}</td>
-                <td className="px-3 py-1.5 text-slate-500">{r.dse_year ?? ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
+function StatusBadge({ status }) {
+  if (status === 'sent') return <span className="pill pill-green">✓ Sent</span>;
+  if (status === 'failed') return <span className="pill pill-coral">Failed</span>;
+  if (status === 'dry_run') return <span className="pill pill-slate">Dry run</span>;
+  return <span className="text-xs text-slate-300">pending</span>;
 }
 
-function RecipientsPreview({ sql, debounce = 400, downloadName }) {
+function RecipientsPreview({ sql, debounce = 400, downloadName, live = false, scheduleId }) {
   const { rows, loading, error } = useRecipients(sql, debounce);
+  const [names, setNames] = useState({});      // phone -> { name, dse } from the student table
+  const [statusMap, setStatusMap] = useState({}); // phone -> latest send status (live)
+
+  // Fill missing names by looking up the phone in the student table.
+  useEffect(() => {
+    if (!rows || rows.length === 0) { setNames({}); return; }
+    const phones = [...new Set(rows.map((r) => r.phone_number).filter(Boolean))];
+    if (!phones.length) return;
+    let active = true;
+    supabase.from('student').select('phone_number, first_name, last_name, full_name, dse_year').in('phone_number', phones)
+      .then(({ data }) => {
+        if (!active) return;
+        const m = {};
+        (data || []).forEach((s) => { m[s.phone_number] = { name: s.full_name || [s.first_name, s.last_name].filter(Boolean).join(' '), dse: s.dse_year }; });
+        setNames(m);
+      });
+    return () => { active = false; };
+  }, [rows]);
+
+  // Live send status — poll this schedule's logs for the recipient phones.
+  useEffect(() => {
+    if (!live || !scheduleId || !rows || rows.length === 0) { setStatusMap({}); return; }
+    const phones = [...new Set(rows.map((r) => r.phone_number).filter(Boolean))];
+    if (!phones.length) return;
+    let active = true;
+    const load = async () => {
+      const { data } = await supabase.from('whatsapp_schedule_logs')
+        .select('whatsapp_number, status, sent_at')
+        .eq('schedule_id', scheduleId)
+        .in('whatsapp_number', phones)
+        .order('sent_at', { ascending: false });
+      if (!active) return;
+      const m = {};
+      (data || []).forEach((l) => { if (!(l.whatsapp_number in m)) m[l.whatsapp_number] = l.status; });
+      setStatusMap(m);
+    };
+    load();
+    const t = setInterval(load, 4000);
+    return () => { active = false; clearInterval(t); };
+  }, [live, scheduleId, rows]);
+
+  const nameOf = (r) => r.full_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || names[r.phone_number]?.name || '—';
+  const dseOf = (r) => r.dse_year ?? names[r.phone_number]?.dse ?? '';
+  const sentCount = live && rows ? rows.filter((r) => statusMap[r.phone_number] === 'sent').length : 0;
+  const noPhone = rows ? rows.filter((r) => !r.phone_number).length : 0;
+
   return (
     <div>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
           Recipients{rows ? `: ${rows.length}${rows.length === 500 ? '+' : ''}` : ''}
+          {live && rows && rows.length > 0 && <span className="text-xs font-normal text-emerald-600">· {sentCount} sent</span>}
           {loading && <Spinner size={14} />}
         </div>
         {rows && rows.length > 0 && downloadName && (
           <button
             className="btn btn-sm btn-ghost"
-            onClick={() => downloadCsv(downloadName, [{ label: 'Name', get: recipientName }, { label: 'Phone', key: 'phone_number' }, { label: 'DSE Year', key: 'dse_year' }], rows)}
+            onClick={() => downloadCsv(downloadName, [{ label: 'Name', get: nameOf }, { label: 'Phone', key: 'phone_number' }, { label: 'DSE Year', get: dseOf }], rows)}
           >
             <Icon name="download" size={14} /> CSV
           </button>
@@ -105,7 +130,31 @@ function RecipientsPreview({ sql, debounce = 400, downloadName }) {
       ) : rows.length === 0 ? (
         <p className="mt-2 text-sm text-slate-400">No recipients match yet.</p>
       ) : (
-        <div className="mt-2"><RecipientsTable rows={rows} /></div>
+        <div className="mt-2">
+          {noPhone > 0 && <div className="mb-2 text-xs text-amber-600">{noPhone} row(s) have no phone number and will be skipped.</div>}
+          <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <th className="px-3 py-2 font-medium">Name</th>
+                  <th className="px-3 py-2 font-medium">Phone</th>
+                  <th className="px-3 py-2 font-medium">DSE</th>
+                  {live && <th className="px-3 py-2 font-medium">Status</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} className="border-b border-slate-100 last:border-0">
+                    <td className="px-3 py-1.5">{nameOf(r)}</td>
+                    <td className="px-3 py-1.5 font-mono text-[13px]">{r.phone_number || <span className="text-amber-600">missing</span>}</td>
+                    <td className="px-3 py-1.5 text-slate-500">{dseOf(r)}</td>
+                    {live && <td className="px-3 py-1.5"><StatusBadge status={statusMap[r.phone_number]} /></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -458,7 +507,7 @@ export default function SchedulerDetail() {
 
       {/* Recipients — verify who's in this broadcast */}
       <div className="card mb-4 p-5 sm:p-6">
-        <RecipientsPreview sql={r.sql_query} debounce={0} downloadName={`recipients-${(r.name || 'schedule').replace(/\s+/g, '-')}.csv`} />
+        <RecipientsPreview sql={r.sql_query} debounce={0} downloadName={`recipients-${(r.name || 'schedule').replace(/\s+/g, '-')}.csv`} live scheduleId={r.id} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
