@@ -18,6 +18,7 @@ import SchedulerDetail from './pages/SchedulerDetail.jsx';
 import Logs from './pages/Logs.jsx';
 import Shipping from './pages/Shipping.jsx';
 import Invoice from './pages/Invoice.jsx';
+import LinkWhatsApp from './pages/LinkWhatsApp.jsx';
 
 function Splash() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/scheduler/:id" element={<SchedulerDetail />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/shipping" element={<Shipping />} />
+          <Route path="/link" element={<LinkWhatsApp />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

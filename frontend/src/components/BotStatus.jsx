@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 
 // If the last heartbeat is older than this, the bot is treated as offline
@@ -58,6 +59,11 @@ export function BotStatusBanner() {
         <span className="font-semibold" style={{ color: s.color }}>WhatsApp bot: {s.label}</span>
         <span className="ml-2 text-sm text-slate-500">{s.hint}{ago != null ? ` · last seen ${ago}s ago` : ''}</span>
       </div>
+      {s.label !== 'Online' && (
+        <Link to="/link" className="ml-auto shrink-0 text-sm font-semibold" style={{ color: s.color }}>
+          Link WhatsApp →
+        </Link>
+      )}
     </div>
   );
 }
@@ -67,13 +73,13 @@ export function BotStatusTile() {
   const s = derive(row === undefined ? null : row);
   const ago = secsAgo(row);
   return (
-    <div className="card h-full p-5">
+    <Link to="/link" className="card block h-full p-5 transition hover:shadow-soft">
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-500">WhatsApp bot</span>
         <Dot color={s.color} />
       </div>
       <div className="mt-3 font-display text-2xl font-semibold" style={{ color: s.color }}>{s.label}</div>
       <div className="mt-1 text-xs text-slate-400">{s.hint}{ago != null ? ` · ${ago}s ago` : ''}</div>
-    </div>
+    </Link>
   );
 }
