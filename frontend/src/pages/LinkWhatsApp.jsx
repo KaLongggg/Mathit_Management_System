@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { PageHeader, Spinner } from '../components/ui.jsx';
+import { useToast } from '../components/Toast.jsx';
 
 function BotCard({ row }) {
+  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(row.label || '');
 
@@ -10,7 +12,9 @@ function BotCard({ row }) {
   const stale = Date.now() - new Date(row.updated_at).getTime() > 90000;
 
   const save = async () => {
-    await supabase.from('bot_status').update({ label: name.trim() || null }).eq('id', row.id);
+    const { error } = await supabase.from('bot_status').update({ label: name.trim() || null }).eq('id', row.id);
+    if (error) return toast(error.message, 'error');
+    toast('Renamed.', 'success');
     setEditing(false); // the 6s poll will reflect the new name
   };
 
