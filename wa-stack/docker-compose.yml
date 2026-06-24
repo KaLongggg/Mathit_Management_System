@@ -36,3 +36,15 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  sync:
+    build: ./sync
+    container_name: thinkific_sync
+    env_file: .env
+    restart: always
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
