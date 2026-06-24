@@ -29,12 +29,27 @@ BOT_KEY = os.getenv("BOT_SHARED_SECRET", "")
 WA_API_URL = os.getenv("WA_API_URL", "http://localhost:3000/send")
 DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
 
+# Map of bot_id -> base URL (e.g. {"whatsapp_bot":"http://bot:3000", ...}).
+# A schedule's bot_id selects which WhatsApp account sends it; unknown/null
+# falls back to WA_API_URL (single-bot back-compat).
+try:
+    BOT_ENDPOINTS = json.loads(os.getenv("BOT_ENDPOINTS", "") or "{}")
+except (ValueError, TypeError):
+    BOT_ENDPOINTS = {}
+
 # Timeouts (tune)
 DB_CONNECT_TIMEOUT = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
 DB_STATEMENT_TIMEOUT_MS = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "20000"))  # 20s
 HTTP_TIMEOUT = float(os.getenv("HTTP_TIMEOUT", "20"))
 
 HEADERS = {"X-API-KEY": BOT_KEY} if BOT_KEY else {}
+
+
+def send_url_for(bot_id):
+    """Resolve the /send URL for a schedule's bot_id (falls back to WA_API_URL)."""
+    base = BOT_ENDPOINTS.get(bot_id) if bot_id else None
+    return f"{base.rstrip('/')}/send" if base else WA_API_URL
+
 
 # ---------------- Requests session with retry ----------------
 def build_http_session():
@@ -87,7 +102,7 @@ STOP_REQUESTED = False
 def fetch_active_rules():
     sql = """
       SELECT id, name, cron_expr, COALESCE(timezone,'Asia/Hong_Kong') AS timezone,
-             sql_query, message_template, image_path, pdf_path, active, run_at
+             sql_query, message_template, image_path, pdf_path, active, run_at, bot_id
       FROM whatsapp_schedules
       WHERE active = true;
     """
@@ -117,7 +132,7 @@ def query_to_dicts(sql_text):
 
 def rule_signature(r: dict) -> str:
     h = hashlib.sha256()
-    for k in ("cron_expr", "timezone", "sql_query", "message_template", "image_path", "pdf_path", "run_at"):
+    for k in ("cron_expr", "timezone", "sql_query", "message_template", "image_path", "pdf_path", "run_at", "bot_id"):
         v = str(r.get(k) or "").encode("utf-8")
         h.update(v); h.update(b"|")
     return h.hexdigest()
@@ -189,7 +204,8 @@ def run_rule(r: dict):
         return
 
     rule_id = r["id"]
-    log.info("Running rule: %s (%s)", r.get("name"), rule_id)
+    target_url = send_url_for(r.get("bot_id"))
+    log.info("Running rule: %s (%s) via %s", r.get("name"), rule_id, target_url)
 
     try:
         rows = query_to_dicts(r["sql_query"])
@@ -229,7 +245,7 @@ def run_rule(r: dict):
                 log.info("[DRY] phone=%s payload=%s", phone, payload)
                 status, err = "dry_run", None
             else:
-                resp = HTTP.post(WA_API_URL, json=payload, headers=HEADERS, timeout=HTTP_TIMEOUT)
+                resp = HTTP.post(target_url, json=payload, headers=HEADERS, timeout=HTTP_TIMEOUT)
 
                 # If WhatsApp isn't linked, abort the whole run instead of
                 # hammering every recipient (avoids thousands of failed logs).

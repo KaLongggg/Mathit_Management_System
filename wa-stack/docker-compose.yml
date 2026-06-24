@@ -1,16 +1,56 @@
 services:
+  # Account 1 (primary) — existing session, id 'whatsapp_bot'
   bot:
     build: ./bot
     container_name: whatsapp_bot
     env_file: .env
     restart: always
 
-    shm_size: "1gb" 
+    environment:
+      BOT_ID: whatsapp_bot
+      BOT_LABEL: "Account 1"
+
+    # Chromium runs with --disable-dev-shm-usage, so a big /dev/shm is wasted.
+    shm_size: "256m"
+    mem_limit: 768m
 
     volumes:
       - ./assets:/app/assets
       - ./data/wwebjs:/app/.wwebjs_auth
       - ./data/chrome:/app/chrome-data
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/healthz"]
+      interval: 20s
+      timeout: 3s
+      retries: 10
+      start_period: 60s
+
+  # Account 2 — second WhatsApp session, id 'whatsapp_bot_2', own data volumes
+  bot2:
+    build: ./bot
+    container_name: whatsapp_bot_2
+    env_file: .env
+    restart: always
+
+    environment:
+      BOT_ID: whatsapp_bot_2
+      BOT_LABEL: "Account 2"
+      WWEBJS_CLIENT_ID: acct2
+
+    shm_size: "256m"
+    mem_limit: 768m
+
+    volumes:
+      - ./assets:/app/assets
+      - ./data/wwebjs-2:/app/.wwebjs_auth
+      - ./data/chrome-2:/app/chrome-data
 
     logging:
       driver: "json-file"

@@ -17,6 +17,10 @@ const CLIENT_ID  = process.env.WWEBJS_CLIENT_ID || 'default';
 const REQUIRED_TOKEN = process.env.BOT_SHARED_SECRET || '';
 const PORT = Number(process.env.PORT || 3000);
 
+// Identity of this bot instance in the bot_status table (one row per account)
+const BOT_ID    = process.env.BOT_ID || 'whatsapp_bot';
+const BOT_LABEL = process.env.BOT_LABEL || null;
+
 const SEND_MIN_DELAY_MS = Number(process.env.SEND_MIN_DELAY_MS || 1200); // safe default
 const SEND_MAX_DELAY_MS = Number(process.env.SEND_MAX_DELAY_MS || 2500); // safe default
 
@@ -107,10 +111,12 @@ const pgPool = new Pool({
 async function heartbeat(detail) {
   try {
     await pgPool.query(
-      `insert into bot_status (id, state, detail, qr, updated_at)
-       values ('whatsapp_bot', $1, $2, $3, now())
+      // label is set on first insert only — never overwritten by a heartbeat, so a
+      // name edited in the app sticks.
+      `insert into bot_status (id, state, detail, qr, label, updated_at)
+       values ($1, $2, $3, $4, $5, now())
        on conflict (id) do update set state = excluded.state, detail = excluded.detail, qr = excluded.qr, updated_at = excluded.updated_at`,
-      [waState, detail || null, currentQr]
+      [BOT_ID, waState, detail || null, currentQr, BOT_LABEL]
     );
   } catch (e) { console.error('heartbeat failed:', e.message); }
 }

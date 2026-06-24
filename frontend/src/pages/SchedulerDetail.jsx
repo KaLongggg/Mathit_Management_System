@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.js';
 import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, ActivePill, Spinner } from '../components/ui.jsx';
 import { MultiSelect } from '../components/MultiSelect.jsx';
+import { useBotStatuses } from '../components/BotStatus.jsx';
 import { Icon } from '../components/icons.jsx';
 import { fmtDate } from '../lib/format.js';
 import { downloadCsv } from '../lib/csv.js';
@@ -22,7 +23,7 @@ const SOURCES = [
 const DEFAULTS = {
   name: '', cron_expr: '0 10 * * *', timezone: 'Asia/Hong_Kong',
   message_template: '', pdf_path: '', image_path: '', active: false,
-  trigger: 'cron', runAt: '',
+  trigger: 'cron', runAt: '', bot_id: '',
 };
 
 const recipientName = (r) => r.full_name || [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
@@ -310,6 +311,8 @@ export default function SchedulerDetail() {
   const [audience, setAudience] = useState(AUDIENCE_DEFAULT);
   const [advancedSql, setAdvancedSql] = useState('');
   const [options, setOptions] = useState({ dseYears: [], levels: [], campaigns: [] });
+  const bots = useBotStatuses() || []; // WhatsApp accounts to choose "send from"
+  const botLabel = (botId) => bots.find((b) => b.id === botId)?.label || botId;
 
   const cronPreview = useMemo(() => serializeCron(cron), [cron]);
   const effectiveSql = useMemo(
@@ -339,6 +342,7 @@ export default function SchedulerDetail() {
       message_template: src.message_template || '', pdf_path: src.pdf_path || '', image_path: src.image_path || '', active: !!src.active,
       trigger: src.run_at ? 'once' : 'cron',
       runAt: src.run_at ? toLocalInput(src.run_at) : '',
+      bot_id: src.bot_id || '',
     });
     setCron(parseCron(src.cron_expr || '0 10 * * *'));
     if (src.audience && src.audience.type && src.audience.type !== 'advanced') {
@@ -371,6 +375,7 @@ export default function SchedulerDetail() {
       pdf_path: form.pdf_path.trim() || null,
       image_path: form.image_path.trim() || null,
       active: form.active,
+      bot_id: form.bot_id || null,
     };
     const errs = [];
     if (!payload.name) errs.push('Name is required.');
@@ -427,6 +432,16 @@ export default function SchedulerDetail() {
               <input id="s-tz" className="input" placeholder="Asia/Hong_Kong" value={form.timezone} onChange={(e) => setForm((x) => ({ ...x, timezone: e.target.value }))} />
             </div>
           </div>
+
+          {bots.length > 1 && (
+            <div className="sm:max-w-xs">
+              <label className="label" htmlFor="s-bot">Send from</label>
+              <select id="s-bot" className="input" value={form.bot_id || (bots[0]?.id || '')} onChange={(e) => setForm((x) => ({ ...x, bot_id: e.target.value }))}>
+                {bots.map((b) => <option key={b.id} value={b.id}>{b.label || b.id}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-400">Which WhatsApp account these messages are sent from.</p>
+            </div>
+          )}
 
           <div>
             <div className="label">Audience</div>
@@ -517,6 +532,7 @@ export default function SchedulerDetail() {
               ? <Field label="One-time send">{fmtDate(r.run_at)}</Field>
               : <Field label="Cron"><span className="font-mono text-[13px]">{r.cron_expr}</span></Field>}
             <Field label="Timezone">{r.timezone}</Field>
+            {bots.length > 1 && <Field label="Send from">{r.bot_id ? botLabel(r.bot_id) : `${botLabel('whatsapp_bot')} (default)`}</Field>}
             <Field label="Active">{r.active ? 'Yes' : 'No'}</Field>
             <Field label="Created">{fmtDate(r.created_at)}</Field>
             <Field label="PDF file">{r.pdf_path}</Field>
