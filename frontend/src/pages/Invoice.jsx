@@ -50,8 +50,8 @@ export default function Invoice() {
         </button>
       </div>
 
-      <div className="mx-auto max-w-3xl bg-white p-10 shadow-card print:max-w-none print:p-0 print:shadow-none">
-        <div className="flex items-start justify-between border-b-2 border-brand-500 pb-6">
+      <div className="mx-auto max-w-3xl bg-white p-6 shadow-card sm:p-10 print:max-w-none print:p-0 print:shadow-none">
+        <div className="flex flex-col gap-5 border-b-2 border-brand-500 pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
             <img src={`${import.meta.env.BASE_URL}favicon.png`} alt="" className="h-12 w-12 rounded-xl" />
             <div>
@@ -60,14 +60,14 @@ export default function Invoice() {
               <div className="text-xs text-slate-400">mathit.hk</div>
             </div>
           </div>
-          <div className="text-right">
+          <div className="sm:text-right">
             <div className="font-display text-2xl font-semibold text-slate-800">INVOICE</div>
             <div className="mt-1 text-sm text-slate-500">No. {invNo}</div>
             <div className="text-sm text-slate-500">Date: {today}</div>
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-6">
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-6">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Bill to</div>
             <div className="mt-1 font-medium text-slate-800">{fullName(s) || rec.user_name || rec.student_id}</div>

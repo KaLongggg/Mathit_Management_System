@@ -186,7 +186,7 @@ export default function Enrolments() {
       />
 
       <div className="card mb-4 p-4 sm:p-5">
-        <div className="grid gap-3 lg:grid-cols-6">
+        <div className="grid gap-3 lg:grid-cols-7">
           <div className="lg:col-span-2">
             <SearchInput value={draft.term} onChange={(v) => setDraft((x) => ({ ...x, term: v }))} onSubmit={apply} placeholder="Search enrolment, student, course, name…" />
           </div>
@@ -198,9 +198,15 @@ export default function Enrolments() {
             <option value="unpaid">Unpaid</option>
             <option value="unset">Not set</option>
           </select>
-          <div className="grid grid-cols-2 gap-2 lg:col-span-1">
-            <input className="input" type="date" value={draft.from} onChange={set('from')} aria-label="Enrolled from" title="Enrolled from" />
-            <input className="input" type="date" value={draft.to} onChange={set('to')} aria-label="Enrolled to" title="Enrolled to" />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:col-span-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-400" htmlFor="enr-from">Enrolled from</label>
+              <input id="enr-from" className="input" type="date" value={draft.from} onChange={set('from')} />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-400" htmlFor="enr-to">Enrolled to</label>
+              <input id="enr-to" className="input" type="date" value={draft.to} onChange={set('to')} />
+            </div>
           </div>
         </div>
         <div className="mt-3 flex gap-2">
