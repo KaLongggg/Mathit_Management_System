@@ -198,14 +198,14 @@ export default function Enrolments() {
             <option value="unpaid">Unpaid</option>
             <option value="unset">Not set</option>
           </select>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:col-span-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400" htmlFor="enr-from">Enrolled from</label>
-              <input id="enr-from" className="input" type="date" value={draft.from} onChange={set('from')} />
+          <div className="grid grid-cols-2 gap-2 lg:col-span-2">
+            <div className="min-w-0">
+              <label className="mb-1 block text-xs font-medium text-slate-400" htmlFor="enr-from">From</label>
+              <input id="enr-from" className="input min-w-0 px-2.5" type="date" value={draft.from} onChange={set('from')} />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-400" htmlFor="enr-to">Enrolled to</label>
-              <input id="enr-to" className="input" type="date" value={draft.to} onChange={set('to')} />
+            <div className="min-w-0">
+              <label className="mb-1 block text-xs font-medium text-slate-400" htmlFor="enr-to">To</label>
+              <input id="enr-to" className="input min-w-0 px-2.5" type="date" value={draft.to} onChange={set('to')} />
             </div>
           </div>
         </div>
