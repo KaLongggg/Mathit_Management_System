@@ -6,7 +6,7 @@ import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Modal, useSort, sortRows, SortHeader } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
 import { MultiSelect } from '../components/MultiSelect.jsx';
-import { ENROLMENT_STATUSES } from '../lib/constants.js';
+import { ENROLMENT_STATUSES, thinkificAdminUserUrl } from '../lib/constants.js';
 import { fmtDate, fmtDateShort, fullName, pct } from '../lib/format.js';
 
 function LogPill({ status }) {
@@ -223,6 +223,9 @@ export default function StudentDetail() {
             </>
           ) : (
             <>
+              <a href={thinkificAdminUserUrl(student.student_id)} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+                <Icon name="external" size={16} /> Thinkific
+              </a>
               <button className="btn btn-ghost" onClick={startEdit}>
                 <Icon name="edit" size={16} /> Edit
               </button>

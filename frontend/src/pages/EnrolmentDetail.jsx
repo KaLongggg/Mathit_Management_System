@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
 import { fmtDate, fmtDateShort, pct } from '../lib/format.js';
+import { thinkificAdminUserUrl, thinkificAdminCourseUrl, thinkificPublicCourseUrl } from '../lib/constants.js';
 
 const DELIVERY_MODES = ['Video', 'Mong Kok', 'Tuen Mun', 'Group'];
 
@@ -20,7 +21,7 @@ export default function EnrolmentDetail() {
     (async () => {
       const { data, error } = await supabase
         .from('enrolments')
-        .select('*, student:student_id ( phone_number, postal_address )')
+        .select('*, student:student_id ( phone_number, postal_address ), course:course_id ( slug )')
         .eq('id', id)
         .maybeSingle();
       if (error) setError(error.message);
@@ -83,6 +84,19 @@ export default function EnrolmentDetail() {
               <Field label="Expired">{rec.expired ? 'Yes' : 'No'}</Field>
               <Field label="Expiry date">{fmtDate(rec.expiry_date)}</Field>
               <Field label="Free trial">{rec.is_free_trial ? 'Yes' : 'No'}</Field>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+              <a href={thinkificAdminUserUrl(rec.student_id)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost">
+                <Icon name="external" size={14} /> Student on Thinkific
+              </a>
+              {rec.course?.slug && (
+                <a href={thinkificPublicCourseUrl(rec.course.slug)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost">
+                  <Icon name="external" size={14} /> Course page
+                </a>
+              )}
+              <a href={thinkificAdminCourseUrl(rec.course_id)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost">
+                <Icon name="external" size={14} /> Edit course on Thinkific
+              </a>
             </div>
           </div>
 

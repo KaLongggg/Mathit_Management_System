@@ -8,6 +8,7 @@ const THINKIFIC_ADMIN_BASE = 'https://mathit-hk.thinkific.com';
 const THINKIFIC_PUBLIC_BASE = 'https://www.mathit.hk';
 export const thinkificAdminCourseUrl = (courseId) => `${THINKIFIC_ADMIN_BASE}/manage/courses/${courseId}/content`;
 export const thinkificPublicCourseUrl = (slug) => `${THINKIFIC_PUBLIC_BASE}/courses/${slug}`;
+export const thinkificAdminUserUrl = (userId) => `${THINKIFIC_ADMIN_BASE}/manage/users/${userId}`;
 
 export const COURSE_CLASS_STYLE = {
   'All-in-one': 'bg-brand-100 text-brand-800',
