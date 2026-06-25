@@ -14,6 +14,7 @@ import { ENROLMENT_STATUSES } from '../lib/constants.js';
 
 const SOURCES = [
   { key: 'course', label: 'Course students' },
+  { key: 'expiring', label: 'Expiring enrolments' },
   { key: 'students', label: 'Students' },
   { key: 'leads', label: 'Marketing leads' },
   { key: 'manual', label: 'Manual list' },
@@ -240,6 +241,19 @@ function AudienceBuilder({ audience, setAudience, advancedSql, setAdvancedSql, o
               <MultiSelect label="DSE year" options={options.dseYears} selected={audience.dseYears} onChange={(v) => set({ dseYears: v })} />
               <MultiSelect label="Current level" options={options.levels} selected={audience.levels} onChange={(v) => set({ levels: v })} />
             </div>
+          </>
+        )}
+        {type === 'expiring' && (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="exp-days">Days before expiry</label>
+                <input id="exp-days" type="number" min="0" className="input" value={audience.expiryDays} onChange={(e) => set({ expiryDays: e.target.value })} />
+              </div>
+              <p className="text-xs text-slate-400 sm:mt-7">Sends once, on the day this many days before each enrolment expires. Keep this schedule <span className="font-medium">Recurring (daily)</span>.</p>
+            </div>
+            <CoursePicker value={audience.courseId} name={audience.courseName} onPick={(id, nm) => set({ courseId: id, courseName: nm })} />
+            <p className="text-xs text-slate-400">Optional: limit to one course (leave blank for all courses).</p>
           </>
         )}
         {type === 'students' && (

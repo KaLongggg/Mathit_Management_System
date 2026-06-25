@@ -29,6 +29,21 @@ export function buildAudienceSql(a) {
     return sql;
   }
 
+  if (a.type === 'expiring') {
+    const n = Math.max(0, parseInt(a.expiryDays, 10) || 0);
+    let sql =
+      STUDENT_SELECT.trimEnd() + ',\n' +
+      '       e.course_name,\n' +
+      "       to_char((e.expiry_date AT TIME ZONE 'Asia/Hong_Kong')::date, 'DD Mon YYYY') AS expiry_date\n" +
+      'FROM student s\n' +
+      'JOIN enrolments e ON e.student_id = s.student_id\n' +
+      "WHERE s.phone_number IS NOT NULL AND s.phone_number <> ''\n" +
+      '  AND e.expiry_date IS NOT NULL\n' +
+      `  AND (e.expiry_date AT TIME ZONE 'Asia/Hong_Kong')::date = (now() AT TIME ZONE 'Asia/Hong_Kong')::date + ${n}`;
+    if (a.courseId) sql += `\n  AND e.course_id = ${qv(a.courseId)}`;
+    return sql;
+  }
+
   if (a.type === 'students') {
     let sql = STUDENT_SELECT + 'FROM student s\n' + "WHERE s.phone_number IS NOT NULL AND s.phone_number <> ''";
     if (a.dseYears?.length) sql += `\n  AND s.dse_year IN (${a.dseYears.map(qv).join(', ')})`;
@@ -61,6 +76,8 @@ export function audienceFields(type) {
     case 'course':
     case 'students':
       return ['student_id', 'first_name', 'last_name', 'full_name', 'phone_number', 'dse_year', 'dse_aim', 'current_level'];
+    case 'expiring':
+      return ['student_id', 'first_name', 'last_name', 'full_name', 'phone_number', 'dse_year', 'dse_aim', 'current_level', 'course_name', 'expiry_date'];
     case 'leads':
       return ['full_name', 'phone_number', 'dse_year', 'campaign'];
     case 'manual':
@@ -79,4 +96,5 @@ export const AUDIENCE_DEFAULT = {
   levels: [],
   campaigns: [],
   phonesText: '',
+  expiryDays: 7,
 };
