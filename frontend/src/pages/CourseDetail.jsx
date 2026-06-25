@@ -10,7 +10,7 @@ import { MultiSelect } from '../components/MultiSelect.jsx';
 import { Icon } from '../components/icons.jsx';
 import { downloadCsv } from '../lib/csv.js';
 import { buildAudienceSql } from '../lib/audience.js';
-import { COURSE_CLASSES, ENROLMENT_STATUSES } from '../lib/constants.js';
+import { COURSE_CLASSES, ENROLMENT_STATUSES, thinkificAdminCourseUrl, thinkificPublicCourseUrl } from '../lib/constants.js';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
 
 function CourseRoster({ courseId, courseName }) {
@@ -222,6 +222,16 @@ export default function CourseDetail() {
               <div className="min-w-0">
                 <h2 className="text-xl font-semibold">{course.course_name}</h2>
                 {course.subtitle && <p className="mt-1 text-sm text-slate-500">{course.subtitle}</p>}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {course.slug && (
+                    <a href={thinkificPublicCourseUrl(course.slug)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost">
+                      <Icon name="external" size={14} /> Public page
+                    </a>
+                  )}
+                  <a href={thinkificAdminCourseUrl(course.course_id)} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-ghost">
+                    <Icon name="external" size={14} /> Edit on Thinkific
+                  </a>
+                </div>
               </div>
             </div>
 

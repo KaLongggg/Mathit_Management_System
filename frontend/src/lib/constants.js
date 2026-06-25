@@ -2,6 +2,13 @@
 // course detail page. Edit this list to add/rename classes.
 export const COURSE_CLASSES = ['All-in-one', '補底班', '常規班', '精讀班', 'By topic', 'Give away'];
 
+// Thinkific deep links. Admin (config) lives on the thinkific subdomain and is
+// keyed by course id; the public sales page is on the custom domain, keyed by slug.
+const THINKIFIC_ADMIN_BASE = 'https://mathit-hk.thinkific.com';
+const THINKIFIC_PUBLIC_BASE = 'https://www.mathit.hk';
+export const thinkificAdminCourseUrl = (courseId) => `${THINKIFIC_ADMIN_BASE}/manage/courses/${courseId}/content`;
+export const thinkificPublicCourseUrl = (slug) => `${THINKIFIC_PUBLIC_BASE}/courses/${slug}`;
+
 export const COURSE_CLASS_STYLE = {
   'All-in-one': 'bg-brand-100 text-brand-800',
   '補底班': 'bg-amber-100 text-amber-700',
