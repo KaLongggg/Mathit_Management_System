@@ -64,7 +64,7 @@
   .btn-danger-ghost { @apply bg-white text-coral-700 border border-coral-100 hover:bg-coral-50; }
 
   .pill {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+    @apply inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold;
   }
   .pill-brand   { @apply bg-brand-100 text-brand-800; }
   .pill-green   { @apply bg-emerald-100 text-emerald-700; }

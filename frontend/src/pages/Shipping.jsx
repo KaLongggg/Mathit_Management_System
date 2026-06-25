@@ -62,7 +62,7 @@ export default function Shipping() {
         <>
           <div className="mb-2 text-sm text-slate-400">{rows.length} to ship</div>
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="hidden w-full text-sm md:table">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
                   <th className="px-5 py-3 font-medium">Student</th>
@@ -93,6 +93,27 @@ export default function Shipping() {
                 ))}
               </tbody>
             </table>
+
+            <ul className="divide-y divide-slate-100 md:hidden">
+              {rows.map((r) => (
+                <li key={r.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <button className="font-medium text-slate-800 hover:underline" onClick={() => navigate(`/student/${encodeURIComponent(r.student_id)}`)}>
+                        {fullName(r.student) || r.student_id}
+                      </button>
+                      <div className="text-xs text-slate-400">{r.student?.phone_number || ''}</div>
+                    </div>
+                    <span className="shrink-0 tabular-nums text-sm text-slate-600">{money(r.paid_amount)}</span>
+                  </div>
+                  <div className="mt-1.5 text-sm text-slate-700">{r.course_name}</div>
+                  <div className="mt-1 whitespace-pre-wrap text-sm text-slate-500">{r.student?.postal_address}</div>
+                  <button className="btn btn-sm btn-primary mt-3 w-full no-print" disabled={busyId === r.id} onClick={() => markShipped(r)}>
+                    {busyId === r.id ? <Spinner size={14} /> : 'Mark shipped'}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         </>
       )}
