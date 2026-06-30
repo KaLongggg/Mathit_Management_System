@@ -11,6 +11,7 @@ import { Icon } from '../components/icons.jsx';
 import { downloadCsv } from '../lib/csv.js';
 import { buildAudienceSql } from '../lib/audience.js';
 import { COURSE_CLASSES, ENROLMENT_STATUSES, thinkificAdminCourseUrl, thinkificPublicCourseUrl } from '../lib/constants.js';
+import { useConfig } from '../lib/config.js';
 import { fmtDateShort, fullName, pct } from '../lib/format.js';
 
 function CourseRoster({ courseId, courseName }) {
@@ -184,6 +185,8 @@ export default function CourseDetail() {
   const [error, setError] = useState('');
   const [klass, setKlass] = useState('');
   const [saving, setSaving] = useState(false);
+  const cfg = useConfig();
+  const courseClasses = cfg.course_class_options || COURSE_CLASSES;
 
   useEffect(() => {
     (async () => {
@@ -240,7 +243,7 @@ export default function CourseDetail() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <select id="course-class" className="input sm:w-64" value={klass} onChange={(e) => setKlass(e.target.value)}>
                   <option value="">— Unclassified —</option>
-                  {COURSE_CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {courseClasses.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <button className="btn btn-primary sm:w-auto" onClick={saveClass} disabled={!dirty || saving}>
                   {saving ? <Spinner /> : 'Save class'}

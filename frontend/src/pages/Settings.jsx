@@ -21,6 +21,16 @@ const FIELDS = [
     hint: 'Prefix for generated invoice numbers, e.g. "MIT-" → MIT-12345.',
     parse: (v) => v.trim(),
   },
+  {
+    key: 'course_class_options', label: 'Course classes', kind: 'list',
+    hint: 'One class per line. Used by the course filter and the course-detail class dropdown.',
+    parse: (v) => v.split('\n').map((s) => s.trim()).filter(Boolean),
+  },
+  {
+    key: 'delivery_mode_options', label: 'Delivery modes', kind: 'list',
+    hint: 'One mode per line. Used by each enrolment’s "Delivery mode" dropdown.',
+    parse: (v) => v.split('\n').map((s) => s.trim()).filter(Boolean),
+  },
 ];
 
 export default function Settings() {
@@ -30,7 +40,10 @@ export default function Settings() {
 
   useEffect(() => {
     loadConfig().then((cfg) => {
-      setForm(Object.fromEntries(FIELDS.map((f) => [f.key, String(cfg[f.key] ?? CONFIG_DEFAULTS[f.key] ?? '')])));
+      setForm(Object.fromEntries(FIELDS.map((f) => {
+        const v = cfg[f.key] ?? CONFIG_DEFAULTS[f.key];
+        return [f.key, f.kind === 'list' ? (Array.isArray(v) ? v.join('\n') : '') : String(v ?? '')];
+      })));
     });
   }, []);
 
@@ -57,17 +70,27 @@ export default function Settings() {
             {FIELDS.map((f) => (
               <div key={f.key}>
                 <label className="label" htmlFor={f.key}>{f.label}</label>
-                <div className="flex items-center gap-2">
-                  <input
+                {f.kind === 'list' ? (
+                  <textarea
                     id={f.key}
-                    type={f.kind === 'number' ? 'number' : 'text'}
-                    min={f.kind === 'number' ? 0 : undefined}
-                    className="input sm:w-48"
+                    rows={Math.max(3, form[f.key].split('\n').length)}
+                    className="input sm:max-w-xs font-mono text-[13px]"
                     value={form[f.key]}
                     onChange={(e) => setForm((x) => ({ ...x, [f.key]: e.target.value }))}
                   />
-                  {f.suffix && <span className="text-sm text-slate-500">{f.suffix}</span>}
-                </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      id={f.key}
+                      type={f.kind === 'number' ? 'number' : 'text'}
+                      min={f.kind === 'number' ? 0 : undefined}
+                      className="input sm:w-48"
+                      value={form[f.key]}
+                      onChange={(e) => setForm((x) => ({ ...x, [f.key]: e.target.value }))}
+                    />
+                    {f.suffix && <span className="text-sm text-slate-500">{f.suffix}</span>}
+                  </div>
+                )}
                 <p className="mt-1.5 text-xs text-slate-400">{f.hint}</p>
               </div>
             ))}

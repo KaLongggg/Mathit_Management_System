@@ -264,11 +264,11 @@ export default function StudentDetail() {
           <div>
             {edit ? (
               <>
-                <label className="label" htmlFor="alt_phone">Alt. phone (e.g. parent / 家長)</label>
+                <label className="label" htmlFor="alt_phone">Alternate phone</label>
                 <input id="alt_phone" className="input" value={form.alt_phone ?? ''} onChange={(e) => setForm((x) => ({ ...x, alt_phone: e.target.value }))} />
               </>
             ) : (
-              <Field label="Alt. phone (parent)">{student.alt_phone}</Field>
+              <Field label="Alternate phone">{student.alt_phone}</Field>
             )}
           </div>
           <div className="sm:col-span-2">

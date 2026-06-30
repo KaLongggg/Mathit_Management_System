@@ -1,13 +1,16 @@
+import { useEffect, useState } from 'react';
 import { supabase } from './supabase.js';
 
 // Small app-wide settings store backed by the `app_config` (key -> jsonb) table.
-// Values are plain JSON (number/string/etc). A tiny in-memory cache avoids
-// refetching the same key repeatedly within a session.
+// Values are plain JSON (number/string/array). A tiny in-memory cache avoids
+// refetching within a session.
 
 const DEFAULTS = {
   enrolment_expiry_months: 12,
   invoice_prefix: 'MIT-',
   expiry_reminder_days: 14,
+  course_class_options: ['All-in-one', '補底班', '常規班', '精讀班', 'By topic', 'Give away'],
+  delivery_mode_options: ['Zoom', 'Tuen Mun', 'Mong Kok', 'Video'],
 };
 
 let cache = null;
@@ -35,6 +38,18 @@ export async function setConfig(key, value) {
   const { error } = await supabase.from('app_config').upsert({ key, value, updated_at: new Date().toISOString() });
   if (error) throw error;
   if (cache) cache[key] = value;
+}
+
+// React hook: returns the loaded config (merged over defaults), loading once.
+export function useConfig() {
+  const [cfg, setCfg] = useState(cache || { ...DEFAULTS });
+  useEffect(() => {
+    let active = true;
+    if (cache) { setCfg(cache); return; }
+    loadConfig().then((c) => { if (active) setCfg(c); });
+    return () => { active = false; };
+  }, []);
+  return cfg;
 }
 
 export { DEFAULTS as CONFIG_DEFAULTS };

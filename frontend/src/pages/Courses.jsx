@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { PageHeader, SearchInput, EmptyState, ErrorBanner, SkeletonRows, ClassPill, useSort, sortRows, SortHeader } from '../components/ui.jsx';
 import { COURSE_CLASSES } from '../lib/constants.js';
+import { useConfig } from '../lib/config.js';
 
 export default function Courses() {
   const [term, setTerm] = useState('');
@@ -11,6 +12,8 @@ export default function Courses() {
   const [error, setError] = useState('');
   const [sort, toggleSort] = useSort('course_name', 'asc');
   const navigate = useNavigate();
+  const cfg = useConfig();
+  const courseClasses = cfg.course_class_options || COURSE_CLASSES;
   const sorted = sortRows(rows || [], sort);
 
   async function load(search = term, cls = klass) {
@@ -52,7 +55,7 @@ export default function Courses() {
           aria-label="Filter by class"
         >
           <option value="">All classes</option>
-          {COURSE_CLASSES.map((c) => (
+          {courseClasses.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
