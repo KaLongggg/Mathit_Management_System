@@ -30,6 +30,9 @@ export const COURSE_CLASS_COLORS = {
   Unclassified: '#cbd5e1',
 };
 
+// Enrolment delivery / attendance modes (multi-select per enrolment, local-only).
+export const DELIVERY_MODES = ['Zoom', 'TM', 'MK', 'Video'];
+
 export const ENROLMENT_STATUSES = ['active', 'completed', 'expired', 'pending'];
 
 export const ENROLMENT_STATUS_COLORS = {

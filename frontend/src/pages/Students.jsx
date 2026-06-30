@@ -16,7 +16,10 @@ function buildQuery(f) {
   if (f.first.trim()) q = q.ilike('first_name', `%${f.first.trim()}%`);
   if (f.last.trim()) q = q.ilike('last_name', `%${f.last.trim()}%`);
   if (f.email.trim()) q = q.ilike('email', `%${f.email.trim()}%`);
-  if (f.phone.trim()) q = q.ilike('phone_number', `%${f.phone.trim()}%`);
+  if (f.phone.trim()) {
+    const p = f.phone.trim();
+    q = q.or(`phone_number.ilike.%${p}%,alt_phone.ilike.%${p}%`);
+  }
   if (f.dse_year.trim()) q = q.ilike('dse_year', `%${f.dse_year.trim()}%`);
   return q;
 }

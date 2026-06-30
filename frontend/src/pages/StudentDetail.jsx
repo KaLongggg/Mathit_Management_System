@@ -7,6 +7,7 @@ import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner, Moda
 import { Icon } from '../components/icons.jsx';
 import { MultiSelect } from '../components/MultiSelect.jsx';
 import { ENROLMENT_STATUSES, thinkificAdminUserUrl } from '../lib/constants.js';
+import { getConfig } from '../lib/config.js';
 import { fmtDate, fmtDateShort, fullName, pct } from '../lib/format.js';
 
 function LogPill({ status }) {
@@ -37,7 +38,8 @@ function EnrolCourseForm({ studentId, onClose, onDone }) {
     setErr('');
     setBusyId(c.course_id);
     try {
-      await enrolStudent(studentId, c.course_id);
+      const months = await getConfig('enrolment_expiry_months');
+      await enrolStudent(studentId, c.course_id, months);
       toast('Enrolled.', 'success');
       onDone();
       onClose();
@@ -159,7 +161,7 @@ export default function StudentDetail() {
   }, [id, loadEnrols]);
 
   function startEdit() {
-    setForm({ ...Object.fromEntries(FIELDS.map(([k]) => [k, student[k] ?? ''])), postal_address: student.postal_address ?? '' });
+    setForm({ ...Object.fromEntries(FIELDS.map(([k]) => [k, student[k] ?? ''])), postal_address: student.postal_address ?? '', alt_phone: student.alt_phone ?? '' });
     setEdit(true);
   }
 
@@ -174,11 +176,12 @@ export default function StudentDetail() {
       // local-only, saved straight to Supabase.
       const fields = Object.fromEntries(FIELDS.map(([k]) => [k, (form[k] ?? '').toString().trim()]));
       const postal = (form.postal_address ?? '').toString().trim() || null;
+      const altPhone = (form.alt_phone ?? '').toString().trim() || null;
       const [{ student: saved }] = await Promise.all([
         updateStudent(id, fields),
-        supabase.from('student').update({ postal_address: postal }).eq('student_id', id),
+        supabase.from('student').update({ postal_address: postal, alt_phone: altPhone }).eq('student_id', id),
       ]);
-      setStudent({ ...saved, postal_address: postal });
+      setStudent({ ...saved, postal_address: postal, alt_phone: altPhone });
       setEdit(false);
       toast('Saved.', 'success');
     } catch (ex) {
@@ -258,6 +261,16 @@ export default function StudentDetail() {
               )}
             </div>
           ))}
+          <div>
+            {edit ? (
+              <>
+                <label className="label" htmlFor="alt_phone">Alt. phone (e.g. parent / 家長)</label>
+                <input id="alt_phone" className="input" value={form.alt_phone ?? ''} onChange={(e) => setForm((x) => ({ ...x, alt_phone: e.target.value }))} />
+              </>
+            ) : (
+              <Field label="Alt. phone (parent)">{student.alt_phone}</Field>
+            )}
+          </div>
           <div className="sm:col-span-2">
             {edit ? (
               <>

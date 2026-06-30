@@ -5,16 +5,14 @@ import { useToast } from '../components/Toast.jsx';
 import { PageHeader, Field, ErrorBanner, SkeletonRows, StatusPill, Spinner } from '../components/ui.jsx';
 import { Icon } from '../components/icons.jsx';
 import { fmtDate, fmtDateShort, pct } from '../lib/format.js';
-import { thinkificAdminUserUrl, thinkificAdminCourseUrl, thinkificPublicCourseUrl } from '../lib/constants.js';
-
-const DELIVERY_MODES = ['Video', 'Mong Kok', 'Tuen Mun', 'Group'];
+import { DELIVERY_MODES, thinkificAdminUserUrl, thinkificAdminCourseUrl, thinkificPublicCourseUrl } from '../lib/constants.js';
 
 export default function EnrolmentDetail() {
   const { id } = useParams();
   const toast = useToast();
   const [rec, setRec] = useState(null);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ delivery_mode: '', notes: '', paid_amount: '', is_paid: false });
+  const [form, setForm] = useState({ delivery_modes: [], notes: '', paid_amount: '', is_paid: false });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -29,7 +27,7 @@ export default function EnrolmentDetail() {
       else {
         setRec(data);
         setForm({
-          delivery_mode: data.delivery_mode || '',
+          delivery_modes: data.delivery_modes || [],
           notes: data.notes || '',
           paid_amount: data.paid_amount ?? '',
           is_paid: !!data.is_paid,
@@ -41,7 +39,7 @@ export default function EnrolmentDetail() {
   async function save() {
     setSaving(true);
     const payload = {
-      delivery_mode: form.delivery_mode || null,
+      delivery_modes: form.delivery_modes.length ? form.delivery_modes : null,
       notes: form.notes.trim() || null,
       paid_amount: form.paid_amount === '' ? null : Number(form.paid_amount),
       is_paid: form.is_paid,
@@ -122,11 +120,22 @@ export default function EnrolmentDetail() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="label" htmlFor="delivery_mode">Delivery mode</label>
-                <select id="delivery_mode" className="input" value={form.delivery_mode} onChange={(e) => setForm((x) => ({ ...x, delivery_mode: e.target.value }))}>
-                  <option value="">—</option>
-                  {DELIVERY_MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
+                <label className="label">Delivery mode</label>
+                <div className="flex flex-wrap gap-2">
+                  {DELIVERY_MODES.map((m) => {
+                    const on = form.delivery_modes.includes(m);
+                    return (
+                      <button
+                        type="button"
+                        key={m}
+                        onClick={() => setForm((x) => ({ ...x, delivery_modes: on ? x.delivery_modes.filter((v) => v !== m) : [...x.delivery_modes, m] }))}
+                        className={`btn btn-sm ${on ? 'btn-primary' : 'btn-ghost'}`}
+                      >
+                        {m}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="flex flex-col">
                 <label className="label" htmlFor="paid_amount">Paid amount (HKD)</label>

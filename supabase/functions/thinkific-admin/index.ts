@@ -99,9 +99,16 @@ Deno.serve(async (req) => {
       const studentId = norm(payload.student_id), courseId = norm(payload.course_id);
       if (!studentId || !courseId) return json({ error: "student_id and course_id are required." }, 400);
 
-      const r = await thinkific("/enrollments", "POST", {
-        course_id: Number(courseId), user_id: Number(studentId), activated_at: new Date().toISOString(),
-      });
+      // Apply the configured default access length (months) as an expiry date.
+      const activatedAt = new Date();
+      const months = Number(payload.expiry_months) || 0;
+      const enrolBody: any = { course_id: Number(courseId), user_id: Number(studentId), activated_at: activatedAt.toISOString() };
+      if (months > 0) {
+        const exp = new Date(activatedAt);
+        exp.setMonth(exp.getMonth() + months);
+        enrolBody.expiry_date = exp.toISOString();
+      }
+      const r = await thinkific("/enrollments", "POST", enrolBody);
       if (!r.ok) return json({ error: "Thinkific could not create the enrolment.", status: r.status, detail: r.data }, 400);
 
       const e = r.data;

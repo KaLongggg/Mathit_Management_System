@@ -56,9 +56,13 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        <NavLink to="/settings" className="nav-item mt-1" data-active={isActive(pathname, { match: ['/settings'] })}>
+          <Icon name="settings" size={19} />
+          <span>Settings</span>
+        </NavLink>
         <button
           onClick={signOut}
-          className="nav-item mt-2 w-full justify-start text-brand-100/80"
+          className="nav-item mt-1 w-full justify-start text-brand-100/80"
           type="button"
         >
           <Icon name="logout" size={19} />
@@ -74,14 +78,23 @@ export default function Layout() {
         {/* Mobile top bar */}
         <header className="sticky top-0 z-40 flex items-center justify-between bg-brand-700 px-4 py-3 pt-safe md:hidden print:!hidden">
           <BrandMark />
-          <button
-            onClick={signOut}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white/90 hover:bg-white/10"
-            aria-label="Sign out"
-            type="button"
-          >
-            <Icon name="logout" size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            <NavLink
+              to="/settings"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white/90 hover:bg-white/10"
+              aria-label="Settings"
+            >
+              <Icon name="settings" size={20} />
+            </NavLink>
+            <button
+              onClick={signOut}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white/90 hover:bg-white/10"
+              aria-label="Sign out"
+              type="button"
+            >
+              <Icon name="logout" size={20} />
+            </button>
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-28 sm:px-6 md:py-8 md:pb-10">

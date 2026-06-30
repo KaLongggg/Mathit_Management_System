@@ -19,6 +19,7 @@ import Logs from './pages/Logs.jsx';
 import Shipping from './pages/Shipping.jsx';
 import Invoice from './pages/Invoice.jsx';
 import LinkWhatsApp from './pages/LinkWhatsApp.jsx';
+import Settings from './pages/Settings.jsx';
 
 function Splash() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/logs" element={<Logs />} />
           <Route path="/shipping" element={<Shipping />} />
           <Route path="/link" element={<LinkWhatsApp />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
