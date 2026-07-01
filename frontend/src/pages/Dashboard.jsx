@@ -87,7 +87,7 @@ export default function Dashboard() {
   useEffect(() => {
     let active = true;
     (async () => {
-      const [students, courses, enrolments, act, comp, exp, pend, newStu, emc, sbm, tc, dseR, compR, waR] = await Promise.all([
+      const [students, courses, enrolments, act, comp, exp, pend, newStu, newEnr, emc, sbm, tc, dseR, compR, waR] = await Promise.all([
         count('student'),
         count('course'),
         count('enrolments'),
@@ -96,6 +96,7 @@ export default function Dashboard() {
         count('enrolments', (q) => q.eq('status', 'expired')),
         count('enrolments', (q) => q.eq('status', 'pending')),
         count('student', (q) => q.gte('created_at', weekAgo)),
+        count('enrolments', (q) => q.gte('enrolled_at', weekAgoDate)),
         supabase.rpc('enrolments_by_month_class'),
         supabase.rpc('students_by_month'),
         supabase.rpc('top_courses', { p_limit: 8 }),
@@ -119,7 +120,7 @@ export default function Dashboard() {
       waRows.forEach((r) => { if (waPivot[r.day]) waPivot[r.day][r.status] = Number(r.n); });
       setWaHealth(days.map((d) => waPivot[d]));
 
-      setS({ students, courses, enrolments, act, comp, exp, pend, newStu });
+      setS({ students, courses, enrolments, act, comp, exp, pend, newStu, newEnr });
 
       // ---- enrolments by month, stacked by class ----
       const emcRows = emc.data || [];
@@ -165,7 +166,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard icon="students" label="Students" value={s.students} sub={s.newStu != null ? `+${s.newStu} this week` : null} to="/students" />
         <StatCard icon="courses" label="Courses" value={s.courses} to="/courses" />
-        <StatCard icon="enrolments" label="Enrolments" value={s.enrolments} to="/enrolments" />
+        <StatCard icon="enrolments" label="Enrolments" value={s.enrolments} sub={s.newEnr != null ? `+${s.newEnr} this week` : null} to="/enrolments" />
         <StatCard icon="check" label="Active enrolments" value={s.act} to="/enrolments" />
         <BotStatusTile />
       </div>
