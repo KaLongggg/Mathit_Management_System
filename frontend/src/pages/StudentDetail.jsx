@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase.js';
 import { deleteStudent, enrolStudent, updateStudent } from '../lib/api.js';
@@ -244,33 +244,37 @@ export default function StudentDetail() {
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Student ID"><span className="font-mono text-[13px]">{student.student_id}</span></Field>
           {FIELDS.map(([k, label]) => (
-            <div key={k}>
-              {edit ? (
-                <>
-                  <label className="label" htmlFor={k}>{label}</label>
-                  <input
-                    id={k}
-                    className="input"
-                    type={k === 'email' ? 'email' : 'text'}
-                    value={form[k] ?? ''}
-                    onChange={(e) => setForm((x) => ({ ...x, [k]: e.target.value }))}
-                  />
-                </>
-              ) : (
-                <Field label={label}>{student[k]}</Field>
+            <Fragment key={k}>
+              <div>
+                {edit ? (
+                  <>
+                    <label className="label" htmlFor={k}>{label}</label>
+                    <input
+                      id={k}
+                      className="input"
+                      type={k === 'email' ? 'email' : 'text'}
+                      value={form[k] ?? ''}
+                      onChange={(e) => setForm((x) => ({ ...x, [k]: e.target.value }))}
+                    />
+                  </>
+                ) : (
+                  <Field label={label}>{student[k]}</Field>
+                )}
+              </div>
+              {k === 'phone_number' && (
+                <div>
+                  {edit ? (
+                    <>
+                      <label className="label" htmlFor="alt_phone">Alternate phone</label>
+                      <input id="alt_phone" className="input" value={form.alt_phone ?? ''} onChange={(e) => setForm((x) => ({ ...x, alt_phone: e.target.value }))} />
+                    </>
+                  ) : (
+                    <Field label="Alternate phone">{student.alt_phone}</Field>
+                  )}
+                </div>
               )}
-            </div>
+            </Fragment>
           ))}
-          <div>
-            {edit ? (
-              <>
-                <label className="label" htmlFor="alt_phone">Alternate phone</label>
-                <input id="alt_phone" className="input" value={form.alt_phone ?? ''} onChange={(e) => setForm((x) => ({ ...x, alt_phone: e.target.value }))} />
-              </>
-            ) : (
-              <Field label="Alternate phone">{student.alt_phone}</Field>
-            )}
-          </div>
           <div className="sm:col-span-2">
             {edit ? (
               <>
